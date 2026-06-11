@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Itinerario USA 2025</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        :root {
+            --navy:       #1a2744;
+            --navy-mid:   #243660;
+            --gold:       #c9a84c;
+            --gold-light: #e8c97a;
+            --gold-pale:  rgba(201,168,76,0.11);
+            --cream:      #f7f4ee;
+            --white:      #ffffff;
+            --gray:       #6b7280;
+            --light-gray: #f3f4f6;
+            --border:     #e5e7eb;
+            --orange:     #d97706;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--navy);
+            min-height: 100vh;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            background: var(--navy);
+            padding: 68px 20px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                repeating-linear-gradient(0deg,  transparent, transparent 48px, rgba(255,255,255,.022) 48px, rgba(255,255,255,.022) 49px),
+                repeating-linear-gradient(90deg, transparent, transparent 48px, rgba(255,255,255,.022) 48px, rgba(255,255,255,.022) 49px);
+        }
+        .hero-inner { position:relative; z-index:1; }
+        .hero-eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 14px;
+        }
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.6rem,6vw,4.4rem);
+            color: var(--white);
+            line-height: 1.1;
+            margin-bottom: 12px;
+        }
+        .hero-sub {
+            font-size: 13px;
+            color: rgba(255,255,255,.4);
+            font-weight: 300;
+            letter-spacing: 3.5px;
+            text-transform: uppercase;
+            margin-bottom: 42px;
+        }
+
+        /* ── SWITCHER ── */
+        .switch-wrap {
+            background: var(--navy);
+            padding: 0 20px 30px;
+            display: flex;
+            justify-content: center;
+        }
+        .switcher {
+            background: rgba(255,255,255,.07);
+            border-radius: 50px;
+            padding: 5px;
+            display: flex;
+            gap: 4px;
+        }
+        .city-btn {
+            padding: 11px 40px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all .25s ease;
+            background: transparent;
+            color: rgba(255,255,255,.5);
+        }
+        .city-btn.active { background:var(--gold); color:var(--navy); font-weight:700; }
+        .city-btn:hover:not(.active) { color:var(--white); }
+
+        /* ── VIEWS ── */
+        .city-view { display:none; }
+        .city-view.active { display:block; }
+
+        /* ── CITY INTRO ── */
+        .city-intro {
+            background: var(--navy);
+            padding: 38px 20px 46px;
+            text-align: center;
+        }
+        .city-tag {
+            display: inline-block;
+            border: 1px solid rgba(201,168,76,.5);
+            color: var(--gold);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 5px 16px;
+            border-radius: 20px;
+            margin-bottom: 14px;
+        }
+        .city-intro h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.2rem,5vw,3.4rem);
+            color: var(--white);
+            margin-bottom: 10px;
+        }
+        .city-intro p {
+            font-size: 14px;
+            color: rgba(255,255,255,.45);
+            max-width: 460px;
+            margin: 0 auto;
+            line-height: 1.65;
+            font-weight: 300;
+        }
+
+        /* ── CONTAINER ── */
+        .container {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 44px 20px 88px;
+        }
+
+        /* ── DAY HEADER ── */
+        .day-header {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 20px;
+            padding-bottom: 18px;
+            border-bottom: 2px solid var(--gold);
+        }
+        .day-num {
+            font-family: 'Playfair Display', serif;
+            font-size: 58px;
+            font-weight: 700;
+            color: var(--gold);
+            line-height: 1;
+            opacity: .7;
+        }
+        .day-meta h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 21px;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .day-sub { font-size:12.5px; color:var(--gray); }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 28px 26px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 18px rgba(26,39,68,.07);
+        }
+
+        /* ── OBJECTIVE ── */
+        .objective {
+            display: inline-flex;
+            background: var(--gold-pale);
+            border: 1px solid rgba(201,168,76,.35);
+            color: #7a5c10;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            padding: 5px 13px;
+            border-radius: 20px;
+            margin-bottom: 22px;
+        }
+
+        /* ── BLOCK ── */
+        .block { margin-bottom:22px; }
+        .block:last-child { margin-bottom:0; }
+        .block + .block { padding-top:20px; border-top:1px solid var(--border); }
+
+        .block-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .time-pill {
+            background: var(--navy);
+            color: var(--white);
+            font-size: 10px;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: .5px;
+        }
+
+        /* ── TRANSPORT ── */
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            background: var(--light-gray);
+            padding: 9px 14px;
+            border-radius: 9px;
+            font-size: 13px;
+            color: #4b5563;
+            margin-bottom: 13px;
+        }
+
+        /* ── ROUTE LABEL ── */
+        .route-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        /* ── STEPS ── */
+        .steps { list-style:none; counter-reset:step; }
+        .steps li {
+            counter-increment: step;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 9px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: #374151;
+        }
+        .steps li:last-child { border-bottom:none; padding-bottom:0; }
+        .steps li::before {
+            content: counter(step);
+            min-width: 22px; height: 22px;
+            background: var(--navy);
+            color: var(--white);
+            border-radius: 50%;
+            font-size: 10.5px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* ── TIPS ── */
+        .tips { list-style:none; }
+        .tips li {
+            display: flex;
+            gap: 9px;
+            padding: 6px 0;
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: #4b5563;
+        }
+        .tips li::before { content:'→'; color:var(--gold); font-weight:700; flex-shrink:0; }
+
+        /* ── HIGHLIGHT BOX ── */
+        .highlight {
+            background: var(--navy);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-top: 13px;
+        }
+        .hl-label {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 5px;
+        }
+        .highlight p { font-size:13.5px; color:rgba(255,255,255,.85); line-height:1.55; }
+
+        /* ── WARNING ── */
+        .warning {
+            background: rgba(201,168,76,.09);
+            border-left: 3px solid var(--gold);
+            border-radius: 0 9px 9px 0;
+            padding: 11px 15px;
+            margin-top: 12px;
+        }
+        .warning p { font-size:13px; color:#7a5c10; line-height:1.55; }
+
+        /* ── OPTIONS (Starbucks) ── */
+        .options { display:grid; gap:9px; margin-top:13px; }
+        .opt { border-radius:10px; padding:12px 15px; font-size:13px; line-height:1.5; color:#374151; }
+        .opt-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+        .opt-green  { background:rgba(34,197,94,.07);  border:1px solid rgba(34,197,94,.28); }
+        .opt-green  .opt-label { color:#15803d; }
+        .opt-yellow { background:rgba(234,179,8,.07);  border:1px solid rgba(234,179,8,.28); }
+        .opt-yellow .opt-label { color:#a16207; }
+
+        /* ── MAP ── */
+        .map-legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 9px;
+            padding: 0 2px;
+        }
+        .leg-item { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--gray); }
+        .leg-dot {
+            width:12px; height:12px; border-radius:50%;
+            border:2px solid white;
+            box-shadow: 0 1px 4px rgba(0,0,0,.2);
+            flex-shrink: 0;
+        }
+
+        .map-wrap {
+            border-radius: 14px;
+            overflow: hidden;
+            height: 330px;
+            margin-bottom: 36px;
+            box-shadow: 0 3px 20px rgba(26,39,68,.11);
+            border: 1px solid rgba(26,39,68,.07);
+        }
+
+        /* Leaflet popup override */
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px !important;
+            box-shadow: 0 4px 22px rgba(0,0,0,.16) !important;
+            font-family: 'DM Sans', sans-serif !important;
+            padding: 0 !important;
+        }
+        .leaflet-popup-content {
+            font-size: 13px !important;
+            line-height: 1.5 !important;
+            color: #1a2744 !important;
+            margin: 12px 16px !important;
+        }
+        .pop-badge {
+            display: inline-block;
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+        }
+        .pop-attraction { background:rgba(26,39,68,.1);    color:#1a2744; }
+        .pop-dining     { background:rgba(217,119,6,.12);  color:#92400e; }
+        .pop-transport  { background:rgba(201,168,76,.15); color:#7a5c10; }
+
+        /* ── FLOW BAR ── */
+        .flow-bar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+            background: var(--navy);
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-top: 16px;
+        }
+        .flow-stop { font-size:12px; font-weight:600; color:var(--white); white-space:nowrap; }
+        .flow-arr  { color:var(--gold); font-size:13px; margin:0 3px; }
+
+        /* ── SEP ── */
+        .sep {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--gold), transparent);
+            margin: 8px 0 38px;
+        }
+
+        /* ── TIPS GRID (general) ── */
+        .sec-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+            gap: 12px;
+        }
+        .tip-card {
+            background: var(--white);
+            border-radius: 13px;
+            padding: 20px 16px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(26,39,68,.05);
+        }
+        .tip-icon { font-size:26px; margin-bottom:9px; }
+        .tip-text { font-size:12.5px; color:var(--gray); line-height:1.5; }
+
+        @media (max-width:580px) {
+            .day-num { font-size:40px; }
+            .card { padding:20px 16px; }
+            .city-btn { padding:10px 22px; }
+            .map-wrap { height:260px; }
+        }
+
+        /* ══════════════════════════════════════════
+           LA VIEW — scoped styles
+        ══════════════════════════════════════════ */
+        #losangeles { background: #F5F0E8; }
+
+        .la-day-band {
+            background: #2C2118;
+            padding: 40px 40px 36px;
+            position: relative;
+        }
+        .la-day-band-label {
+            font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+            color: #D4A853; margin-bottom: 10px;
+        }
+        .la-day-band-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(22px, 3.5vw, 38px);
+            font-weight: 700; color: #FDFAF5; line-height: 1.1;
+        }
+        .la-day-band-sub {
+            font-style: italic; font-size: 14px;
+            color: rgba(253,250,245,0.45); margin-top: 8px;
+        }
+        .la-day-band-tags {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px;
+        }
+        .la-day-band-tag {
+            font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+            padding: 4px 10px; border: 1px solid rgba(212,168,83,0.3);
+            color: rgba(253,250,245,0.5); border-radius: 1px;
+        }
+        .la-day-band-num {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(60px, 10vw, 110px); font-weight: 900;
+            color: rgba(253,250,245,0.04); line-height: 1;
+            position: absolute; right: 40px; top: 50%; transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .la-section { padding: 48px 40px; max-width: 960px; margin: 0 auto; }
+        .la-section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.08), transparent);
+            margin: 0 40px;
+        }
+
+        .la-tip-box {
+            border-left: 3px solid #C4603A;
+            background: rgba(196,96,58,0.05);
+            padding: 16px 20px; margin: 16px 0;
+            border-radius: 0 2px 2px 0;
+            font-size: 13.5px; line-height: 1.7; color: #8A7968;
+        }
+        .la-tip-box strong { color: #2C2118; font-weight: 500; }
+
+        .la-parking-box {
+            background: #2C2118; color: #FDFAF5;
+            padding: 28px 32px; border-radius: 2px; margin-bottom: 32px;
+            display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start;
+        }
+        .la-parking-icon { font-size: 28px; opacity: 0.8; }
+        .la-parking-title {
+            font-family: 'Playfair Display', serif; font-size: 18px;
+            color: #D4A853; margin-bottom: 10px;
+        }
+        .la-parking-text { font-size: 13.5px; line-height: 1.8; color: rgba(253,250,245,0.7); font-weight: 300; }
+        .la-parking-text strong { color: #FDFAF5; font-weight: 500; }
+
+        .la-map-container {
+            border-radius: 2px; overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.07); margin-bottom: 36px;
+        }
+        .la-map-label {
+            background: #2C2118; padding: 12px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .la-map-label-text { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(253,250,245,0.45); }
+        .la-map-label-title { font-family: 'Playfair Display', serif; font-size: 14px; color: #FDFAF5; }
+
+        .la-timeline { position: relative; padding-left: 32px; margin-bottom: 48px; }
+        .la-timeline::before {
+            content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 1px;
+            background: linear-gradient(to bottom, #C4603A, #D4A853, #5B8FA8, transparent);
+        }
+        .la-tl-item { position: relative; padding: 0 0 32px 32px; }
+        .la-tl-dot {
+            position: absolute; left: -5px; top: 6px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #C4603A; border: 2px solid #F5F0E8;
+            box-shadow: 0 0 0 3px rgba(196,96,58,0.18);
+        }
+        .la-tl-time {
+            font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+            color: #8A7968; margin-bottom: 7px;
+        }
+        .la-tl-card {
+            background: #FDFAF5; border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 2px; padding: 20px 24px;
+            box-shadow: 0 2px 14px rgba(0,0,0,0.04);
+            transition: box-shadow 0.3s, transform 0.3s;
+        }
+        .la-tl-card:hover { box-shadow: 0 6px 28px rgba(0,0,0,0.09); transform: translateY(-2px); }
+        .la-tl-name {
+            font-family: 'Playfair Display', serif; font-size: 18px;
+            font-weight: 600; color: #2C2118; margin-bottom: 7px; line-height: 1.2;
+        }
+        .la-tl-notes { font-size: 13.5px; line-height: 1.7; color: #8A7968; font-weight: 300; }
+        .la-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+            padding: 3px 9px; border-radius: 2px; margin-bottom: 10px; font-weight: 500;
+        }
+        .la-badge-place { background: rgba(122,140,110,0.12); color: #7A8C6E; }
+        .la-badge-food  { background: rgba(212,168,83,0.12); color: #A07828; }
+        .la-badge-tour  { background: rgba(168,68,42,0.1); color: #A8442A; }
+
+        .la-food-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+            gap: 2px; margin-bottom: 32px;
+        }
+        .la-food-card {
+            background: #FDFAF5; padding: 26px 22px;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: background 0.3s; position: relative; overflow: hidden;
+        }
+        .la-food-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+        .la-food-card.eco::before { background: #7A8C6E; }
+        .la-food-card.mid::before { background: #D4A853; }
+        .la-food-card.top::before { background: #C4603A; }
+        .la-food-card:hover { background: #E8DFD0; }
+        .la-food-price { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; font-weight: 500; }
+        .la-food-card.eco .la-food-price { color: #7A8C6E; }
+        .la-food-card.mid .la-food-price { color: #A07828; }
+        .la-food-card.top .la-food-price { color: #A8442A; }
+        .la-food-name { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: #2C2118; margin-bottom: 4px; }
+        .la-food-range { font-size: 12px; color: #8A7968; margin-bottom: 10px; }
+        .la-food-desc { font-size: 13px; line-height: 1.7; color: #8A7968; font-weight: 300; }
+
+        /* ══════════════════════════════════════════
+           ROADTRIP VIEW — scoped styles
+        ══════════════════════════════════════════ */
+        #roadtrip { background: #14110F; color: #F2EDE4; }
+
+        .rt-intro {
+            background: #1E1B18; padding: 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .rt-intro-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(32px,5vw,58px); font-weight: 700;
+            color: #FAF7F2; line-height: 1; letter-spacing: -1px; margin-bottom: 8px;
+        }
+        .rt-intro-title span { color: #E8A020; }
+        .rt-intro-sub { font-size: 13px; color: rgba(232,237,228,0.5); margin-bottom: 20px; }
+        .rt-stats {
+            display: flex; flex-wrap: wrap; gap: 0;
+            border: 1px solid rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden;
+            max-width: 560px;
+        }
+        .rt-stat {
+            flex: 1; padding: 14px 18px; border-right: 1px solid rgba(255,255,255,0.07);
+            text-align: center; min-width: 100px;
+        }
+        .rt-stat:last-child { border-right: none; }
+        .rt-stat-val { font-family: 'Playfair Display', serif; font-size: 24px; color: #E8A020; line-height: 1; display: block; }
+        .rt-stat-lbl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #8C8078; margin-top: 3px; display: block; }
+
+        .rt-map-wrap { border-top: 1px solid rgba(255,255,255,0.07); border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .rt-map-header {
+            background: #2A2320; padding: 13px 40px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .rt-map-title { font-family: 'Playfair Display', serif; font-size: 16px; letter-spacing: 1px; color: #E8A020; }
+        .rt-map-sub { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #8C8078; }
+
+        .rt-summary {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            border-top: 1px solid rgba(255,255,255,0.07);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .rt-summary-item {
+            background: #2A2320; padding: 24px 32px;
+            border-right: 1px solid rgba(255,255,255,0.07);
+        }
+        .rt-summary-item:last-child { border-right: none; }
+        .rt-si-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: #8C8078; margin-bottom: 8px; }
+        .rt-si-val { font-family: 'Playfair Display', serif; font-size: 22px; color: #E8A020; line-height: 1; margin-bottom: 6px; }
+        .rt-si-desc { font-size: 12.5px; color: rgba(242,237,228,0.5); line-height: 1.6; }
+
+        .rt-stops { padding: 40px 40px 20px; max-width: 880px; margin: 0 auto; }
+        .rt-eyebrow {
+            font-size: 9px; letter-spacing: 4px; text-transform: uppercase;
+            color: #E8A020; margin-bottom: 32px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .rt-eyebrow::after { content:''; flex:1; height:1px; background:linear-gradient(to right,rgba(232,160,32,0.3),transparent); }
+
+        .rt-stop { display: grid; grid-template-columns: 60px 1fr; gap: 0 24px; margin-bottom: 2px; }
+        .rt-stop-left { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+        .rt-marker {
+            width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+            display: grid; place-items: center; font-size: 15px; position: relative; z-index: 1;
+        }
+        .rt-marker.start  { background: #8DA882; color: #14110F; }
+        .rt-marker.wine   { background: rgba(150,60,120,0.3); color: #D080C0; border: 1px solid rgba(150,60,120,0.4); }
+        .rt-marker.coast  { background: rgba(100,170,190,0.2); color: #7AACBF; border: 1px solid rgba(100,170,190,0.3); }
+        .rt-marker.danish { background: rgba(60,120,180,0.25); color: #7AACBF; border: 1px solid rgba(100,160,200,0.3); }
+        .rt-marker.city   { background: rgba(200,90,42,0.25); color: #C85A2A; border: 1px solid rgba(200,90,42,0.4); }
+        .rt-marker.end    { background: #E8A020; color: #14110F; }
+        .rt-connector {
+            flex: 1; width: 1px; min-height: 24px; margin: 5px 0;
+            background: rgba(255,255,255,0.07);
+        }
+        .rt-body {
+            background: #2A2320; border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 2px; padding: 22px 26px; margin-bottom: 2px;
+            transition: border-color 0.3s;
+        }
+        .rt-body:hover { border-color: rgba(232,160,32,0.2); }
+        .rt-time-badge {
+            display: inline-block; background: rgba(232,160,32,0.15); color: #E8A020;
+            font-size: 9px; letter-spacing: 1px; padding: 2px 8px; border-radius: 1px; margin-bottom: 8px;
+        }
+        .rt-stop-title { font-family: 'Playfair Display', serif; font-size: 22px; color: #FAF7F2; line-height: 1; margin-bottom: 4px; }
+        .rt-stop-subtitle { font-style: italic; font-size: 12px; color: #8C8078; margin-bottom: 10px; }
+        .rt-stop-desc { font-size: 13.5px; line-height: 1.75; color: rgba(242,237,228,0.65); font-weight: 300; }
+        .rt-tip {
+            margin-top: 12px; padding: 10px 14px;
+            border-left: 2px solid #E8A020; background: rgba(232,160,32,0.08);
+            border-radius: 0 2px 2px 0; font-size: 13px; line-height: 1.65;
+            color: rgba(242,237,228,0.7);
+        }
+        .rt-tip strong { color: #FAF7F2; font-weight: 600; }
+        .rt-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+        .rt-tag {
+            font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+            padding: 3px 9px; border: 1px solid rgba(255,255,255,0.08); color: #8C8078; border-radius: 1px;
+        }
+        .rt-tag.hl { border-color: rgba(232,160,32,0.3); color: #E8A020; }
+
+        .rt-drive { display: grid; grid-template-columns: 60px 1fr; gap: 0 24px; margin-bottom: 2px; }
+        .rt-drive-left { display: flex; flex-direction: column; align-items: center; }
+        .rt-drive-icon { width: 38px; height: 20px; display: grid; place-items: center; font-size: 14px; }
+        .rt-drive-line {
+            flex: 1; width: 2px; min-height: 36px;
+            background: repeating-linear-gradient(to bottom,rgba(232,160,32,0.28) 0,rgba(232,160,32,0.28) 8px,transparent 8px,transparent 18px);
+            margin: 3px 0;
+        }
+        .rt-drive-body { padding: 10px 26px; display: flex; align-items: center; gap: 16px; }
+        .rt-dist { font-family: 'Playfair Display', serif; font-size: 19px; color: rgba(232,160,32,0.5); }
+        .rt-dist-info { font-size: 11px; letter-spacing: 1px; color: rgba(255,255,255,0.2); }
+
+        .rt-tolls {
+            background: #2A2320; border-top: 1px solid rgba(255,255,255,0.07);
+            border-bottom: 1px solid rgba(255,255,255,0.07); padding: 40px;
+        }
+        .rt-tolls-inner { max-width: 880px; margin: 0 auto; }
+        .rt-tolls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+        .rt-toll-card { border-radius: 2px; padding: 24px 22px; }
+        .rt-toll-card.free { background: rgba(20,30,20,0.6); border: 1px solid rgba(106,154,106,0.25); }
+        .rt-toll-card.opt  { background: rgba(30,20,10,0.6); border: 1px solid rgba(232,160,32,0.2); }
+        .rt-toll-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; }
+        .rt-toll-card.free .rt-toll-label { color: #6A9A6A; }
+        .rt-toll-card.opt  .rt-toll-label { color: #E8A020; }
+        .rt-toll-val { font-family: 'Playfair Display', serif; font-size: 28px; line-height: 1; margin-bottom: 8px; }
+        .rt-toll-card.free .rt-toll-val { color: #6A9A6A; }
+        .rt-toll-card.opt  .rt-toll-val { color: #E8A020; }
+        .rt-toll-desc { font-size: 13px; line-height: 1.7; color: rgba(242,237,228,0.6); font-weight: 300; }
+        .rt-toll-full { background: #1E1B18; border: 1px solid rgba(255,255,255,0.07); border-radius: 2px; padding: 22px; grid-column: 1/-1; margin-top: 2px; }
+        .rt-toll-full-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #8C8078; margin-bottom: 14px; }
+        .rt-toll-methods { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 16px; }
+        .rt-method-title { font-size: 12px; font-weight: 600; color: #FAF7F2; margin-bottom: 5px; }
+        .rt-method-desc { font-size: 12px; color: #8C8078; line-height: 1.6; }
+
+        @media(max-width:640px) {
+            .rt-summary { grid-template-columns: 1fr; }
+            .rt-summary-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
+            .rt-tolls-grid { grid-template-columns: 1fr; }
+            .la-parking-box { grid-template-columns: 1fr; }
+            .la-food-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ══════════════════════════════════════════
+           NEW YORK VIEW — scoped styles
+        ══════════════════════════════════════════ */
+        #newyork { background: #111318; color: #f0ece3; font-family: 'DM Sans', sans-serif; }
+
+        .nyc-banner {
+            background: #f5c518; padding: 12px 40px;
+            display: flex; gap: 12px; align-items: flex-start;
+        }
+        .nyc-banner p { font-size: 13px; font-weight: 600; color: #0a0a0a; line-height: 1.6; }
+        .nyc-banner strong { font-weight: 800; }
+
+        .nyc-container { max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+
+        .nyc-day { padding: 56px 0 0; }
+        .nyc-day-header {
+            display: grid; grid-template-columns: 110px 1fr; gap: 0;
+            margin-bottom: 36px; border-bottom: 1px solid #2a2d38; padding-bottom: 28px;
+        }
+        .nyc-day-num-block {
+            border-right: 1px solid #2a2d38; padding-right: 24px;
+            display: flex; flex-direction: column; justify-content: flex-end;
+        }
+        .nyc-day-num-lbl { font-size: 10px; letter-spacing: 3px; color: #8892a4; text-transform: uppercase; margin-bottom: 4px; font-family: 'DM Mono', monospace; }
+        .nyc-day-num { font-family: 'Bebas Neue', sans-serif; font-size: 88px; line-height: 1; color: #2a2d38; }
+        .nyc-day-info { padding-left: 28px; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 4px; }
+        .nyc-day-weekday { font-size: 10px; letter-spacing: 3px; color: #f5c518; text-transform: uppercase; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+        .nyc-day-title { font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: 2px; color: #fafaf8; line-height: 1; margin-bottom: 6px; }
+        .nyc-day-tagline { font-family: 'Libre Baskerville', serif; font-size: 13px; font-style: italic; color: #8892a4; }
+
+        .nyc-route {
+            background: #1e2028; border: 1px solid #2a2d38; border-radius: 6px;
+            padding: 10px 16px; margin-bottom: 24px;
+            display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+        }
+        .nyc-route-lbl { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 3px; color: #8892a4; text-transform: uppercase; flex-shrink: 0; padding-right: 8px; border-right: 1px solid #2a2d38; margin-right: 4px; }
+        .nyc-stop { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #f0ece3; padding: 3px 9px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+        .nyc-arr { color: #f5c518; font-size: 11px; flex-shrink: 0; }
+
+        .nyc-note {
+            background: #1e2028; border-left: 3px solid #f5c518; border-radius: 0 6px 6px 0;
+            padding: 11px 15px; margin-bottom: 22px; font-size: 12.5px; line-height: 1.7;
+            color: rgba(240,236,227,0.8); display: flex; gap: 10px;
+        }
+        .nyc-note.green { border-left-color: #16a34a; }
+        .nyc-note em { color: #f5c518; font-style: normal; font-weight: 600; }
+        .nyc-note.green em { color: #4ade80; }
+
+        .nyc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+        .nyc-grid.two { grid-template-columns: 1fr 1fr; }
+        .nyc-grid.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+        .nyc-block {
+            background: #1e2028; border: 1px solid #2a2d38; border-radius: 8px;
+            overflow: hidden; transition: border-color 0.2s, transform 0.2s;
+        }
+        .nyc-block:hover { border-color: rgba(245,197,24,0.3); transform: translateY(-2px); }
+        .nyc-block-top {
+            padding: 10px 14px 9px; border-bottom: 1px solid #2a2d38;
+            display: flex; justify-content: space-between; align-items: flex-start;
+        }
+        .nyc-block-time { font-family: 'DM Mono', monospace; font-size: 10px; color: #f5c518; letter-spacing: 1px; font-weight: 500; }
+        .nyc-bdg { font-family: 'DM Mono', monospace; font-size: 9px; padding: 2px 7px; border-radius: 3px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+        .nyc-bdg-walk  { background: rgba(22,163,74,0.15);  color: #4ade80; border: 1px solid rgba(22,163,74,0.3); }
+        .nyc-bdg-food  { background: rgba(217,119,6,0.15);  color: #fbbf24; border: 1px solid rgba(217,119,6,0.3); }
+        .nyc-bdg-view  { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+        .nyc-bdg-tour  { background: rgba(37,99,235,0.15);  color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); }
+        .nyc-bdg-free  { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .nyc-bdg-night { background: rgba(232,49,42,0.15);  color: #f87171; border: 1px solid rgba(232,49,42,0.3); }
+        .nyc-bdg-icon  { background: rgba(245,197,24,0.15); color: #f5c518; border: 1px solid rgba(245,197,24,0.3); }
+
+        .nyc-block-body { padding: 13px 14px; }
+        .nyc-block-name { font-family: 'Libre Baskerville', serif; font-size: 15px; font-weight: 700; color: #fafaf8; margin-bottom: 5px; line-height: 1.25; }
+        .nyc-block-desc { font-size: 11.5px; color: #8892a4; line-height: 1.6; margin-bottom: 9px; font-weight: 300; }
+        .nyc-tips-list { list-style: none; }
+        .nyc-tips-list li { font-size: 11px; color: rgba(240,236,227,0.75); padding: 2px 0 2px 13px; position: relative; line-height: 1.45; }
+        .nyc-tips-list li::before { content: '▸'; position: absolute; left: 0; color: #f5c518; font-size: 8px; top: 4px; }
+        .nyc-block-footer { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(136,146,164,0.7); margin-top: 9px; padding-top: 9px; border-top: 1px solid #2a2d38; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+
+        .nyc-food-section { margin-bottom: 22px; }
+        .nyc-food-title { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 3px; color: #d97706; text-transform: uppercase; margin-bottom: 11px; display: flex; align-items: center; gap: 8px; }
+        .nyc-food-title::after { content: ''; flex: 1; height: 1px; background: #2a2d38; }
+        .nyc-food-chips { display: flex; gap: 9px; flex-wrap: wrap; }
+        .nyc-chip { background: rgba(217,119,6,0.1); border: 1px solid rgba(217,119,6,0.25); border-radius: 6px; padding: 9px 13px; display: flex; flex-direction: column; gap: 2px; transition: border-color 0.2s, background 0.2s; }
+        .nyc-chip:hover { background: rgba(217,119,6,0.18); border-color: rgba(217,119,6,0.5); }
+        .nyc-chip-e { font-size: 17px; }
+        .nyc-chip-name { font-size: 11.5px; font-weight: 600; color: #f0ece3; }
+        .nyc-chip-desc { font-size: 9.5px; color: #8892a4; font-family: 'DM Mono', monospace; }
+        .nyc-chip-note { font-size: 9.5px; color: #d97706; font-style: italic; }
+
+        .nyc-map-legend { background: #1e2028; border: 1px solid #2a2d38; border-bottom: none; border-radius: 6px 6px 0 0; padding: 9px 15px; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+        .nyc-leg-lbl { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; color: #8892a4; text-transform: uppercase; }
+        .nyc-leg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(240,236,227,0.8); font-weight: 500; }
+        .nyc-leg-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+        .nyc-leg-sq { width: 13px; height: 9px; border-radius: 2px; flex-shrink: 0; border: 1.5px dashed; }
+        .nyc-map-box { height: 380px; border: 1px solid #2a2d38; border-radius: 0 0 6px 6px; overflow: hidden; position: relative; }
+
+        .nyc-divider { border: none; border-top: 1px solid #2a2d38; margin: 0; }
+
+        .nyc-food-guide { background: #1e2028; padding: 48px 40px; border-top: 3px solid #f5c518; }
+        .nyc-food-guide-title { font-family: 'Bebas Neue', sans-serif; font-size: 46px; letter-spacing: 2px; color: #fafaf8; margin-bottom: 5px; }
+        .nyc-food-guide-sub { font-family: 'Libre Baskerville', serif; font-style: italic; color: #8892a4; font-size: 13px; margin-bottom: 32px; }
+        .nyc-food-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+        .nyc-food-card { background: #111318; border: 1px solid #2a2d38; border-radius: 8px; padding: 16px; transition: border-color 0.2s, transform 0.2s; }
+        .nyc-food-card:hover { border-color: rgba(245,197,24,0.35); transform: translateY(-2px); }
+        .nyc-food-card-top { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 9px; }
+        .nyc-food-card-e { font-size: 26px; flex-shrink: 0; }
+        .nyc-food-card-name { font-family: 'Libre Baskerville', serif; font-size: 14px; font-weight: 700; color: #fafaf8; margin-bottom: 2px; }
+        .nyc-food-card-type { font-family: 'DM Mono', monospace; font-size: 9.5px; color: #f5c518; letter-spacing: 1px; }
+        .nyc-food-card-desc { font-size: 11.5px; color: #8892a4; line-height: 1.6; margin-bottom: 7px; }
+        .nyc-food-card-loc { font-family: 'DM Mono', monospace; font-size: 9.5px; color: rgba(136,146,164,0.7); }
+        .nyc-food-card-tip { font-size: 10.5px; color: rgba(245,197,24,0.8); font-style: italic; margin-top: 6px; border-top: 1px solid #2a2d38; padding-top: 6px; }
+
+        .nyc-tips-section { background: #0a0a0a; padding: 48px 40px; }
+        .nyc-tips-title { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 2px; color: #fafaf8; margin-bottom: 28px; }
+        .nyc-tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+        .nyc-tip-card { background: #1e2028; border: 1px solid #2a2d38; border-radius: 8px; padding: 16px; }
+        .nyc-tip-icon { font-size: 18px; margin-bottom: 9px; }
+        .nyc-tip-card h4 { font-size: 12px; color: #f5c518; font-weight: 700; margin-bottom: 5px; font-family: 'DM Mono', monospace; letter-spacing: 1px; }
+        .nyc-tip-card p { font-size: 11.5px; color: #8892a4; line-height: 1.65; }
+
+        .nyc-food-map-wrap { margin-top: 36px; }
+        .nyc-food-map-title { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; color: #fafaf8; margin-bottom: 4px; }
+        .nyc-food-map-sub { font-size: 11px; color: #8892a4; font-family: 'DM Mono', monospace; margin-bottom: 13px; letter-spacing: 1px; }
+        .nyc-food-map-leg { display: flex; gap: 14px; flex-wrap: wrap; padding: 9px 15px; background: #111318; border: 1px solid #2a2d38; border-bottom: none; border-radius: 6px 6px 0 0; align-items: center; }
+        .nyc-food-map-box { height: 420px; border: 1px solid #2a2d38; border-radius: 0 0 6px 6px; overflow: hidden; }
+
+        @media(max-width:768px) {
+            .nyc-grid, .nyc-grid.two, .nyc-grid.four { grid-template-columns: 1fr; }
+            .nyc-day-header { grid-template-columns: 80px 1fr; }
+            .nyc-container, .nyc-food-guide, .nyc-tips-section, .nyc-banner { padding-left: 20px; padding-right: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+    <div class="hero-inner">
+        <p class="hero-eyebrow">Viaje por USA · 2025</p>
+        <h1 class="hero-title">Itinerarios</h1>
+        <p class="hero-sub">Chicago · Seattle · Roadtrip · Los Ángeles · New York</p>
+    </div>
+</header>
+
+<!-- SWITCHER -->
+<div class="switch-wrap">
+    <div class="switcher">
+        <button class="city-btn active" onclick="showCity('chicago',this)">Chicago</button>
+        <button class="city-btn"        onclick="showCity('seattle',this)">Seattle</button>
+        <button class="city-btn"        onclick="showCity('roadtrip',this)">Roadtrip</button>
+        <button class="city-btn"        onclick="showCity('losangeles',this)">Los Ángeles</button>
+        <button class="city-btn"        onclick="showCity('newyork',this)">New York</button>
+    </div>
+</div>
+
+
+<!-- ══════════════════ CHICAGO ══════════════════ -->
+<div id="chicago" class="city-view active">
+    <div class="city-intro">
+        <span class="city-tag">3 Días</span>
+        <h1>Chicago</h1>
+        <p>Skyline, arquitectura sobre el río, barrios locales y los clásicos de la ciudad</p>
+    </div>
+
+    <div class="container">
+
+        <!-- DÍA 1 -->
+        <div class="day-header">
+            <div class="day-num">01</div>
+            <div class="day-meta">
+                <h2>Sábado — Primer Contacto</h2>
+                <p class="day-sub">Skyline + paseo icónico caminando</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="objective">Objetivo: Skyline + paseo icónico a pie</div>
+
+            <div class="block">
+                <div class="block-title">Traslado</div>
+                <div class="transport">🚇 Red Line desde <strong>Sox–35th</strong> → bajar en <strong>Lake/Jackson</strong> &nbsp;(20–25 min)</div>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Recorrido del día</div>
+                <div class="route-label">Mapa lógico</div>
+                <ul class="steps">
+                    <li>Riverwalk — inicio del recorrido junto al río</li>
+                    <li>Puentes sobre el río / Wacker Drive — mejores vistas del skyline</li>
+                    <li>Millennium Park — The Bean (Cloud Gate)</li>
+                    <li>Lago Michigan — cierre del día</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Tips del recorrido</div>
+                <ul class="tips">
+                    <li>Caminar siempre hacia el este siguiendo el río</li>
+                    <li>Subir y bajar entre niveles (Riverwalk y calle) para distintas vistas</li>
+                    <li>Aprovechar los puentes para fotos del skyline</li>
+                    <li>No apurarse — este paseo define la primera impresión de la ciudad</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Cena recomendada</div>
+                <ul class="tips">
+                    <li><strong>Portillo's</strong> — rápido, clásico de Chicago</li>
+                    <li><strong>Lou Malnati's</strong> — deep dish pizza, más tranquilo</li>
+                </ul>
+                <div class="highlight" style="margin-top:14px;">
+                    <p class="hl-label">Regreso</p>
+                    <p>Uber recomendado si están cansados</p>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="block-title"><span class="time-pill">22:00</span> Fuegos artificiales — Navy Pier 🎆</div>
+                <ul class="tips">
+                    <li>Los sábados en temporada (mayo–octubre) hay fuegos artificiales en el Navy Pier a las 10pm</li>
+                    <li>Llegar con 20–30 min de anticipación para ubicarse bien sobre el lago</li>
+                    <li>El mejor punto: pararse en el extremo este del muelle o sobre la orilla del lago mirando al norte</li>
+                    <li>Duran aproximadamente 10 minutos — breve pero espectacular sobre el agua</li>
+                </ul>
+                <div class="warning" style="margin-top:12px;">
+                    <p>⚠️ <strong>Verificar:</strong> Los fuegos se realizan en días específicos de la temporada. Confirmar en navypier.com antes del viaje. Acceso gratuito desde el exterior del muelle.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-legend">
+            <div class="leg-item"><div class="leg-dot" style="background:#1a2744;"></div> Atracción</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#d97706;"></div> Gastronomía</div>
+        </div>
+        <div class="map-wrap" id="map-chi-1"></div>
+
+        <div class="sep"></div>
+
+        <!-- DÍA 2 -->
+        <div class="day-header">
+            <div class="day-num">02</div>
+            <div class="day-meta">
+                <h2>Domingo — Arquitectura + Experiencia Top</h2>
+                <p class="day-sub">Optimizar recorridos + experiencia icónica</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="objective">Objetivo: Optimizar recorridos + experiencia icónica</div>
+
+            <div class="block">
+                <div class="block-title">Mañana — Lincoln Park</div>
+                <div class="transport">🚇 Red Line → <strong>Fullerton</strong></div>
+                <div class="route-label">Mapa lógico: Zoo → Parque → Lago</div>
+                <ul class="steps">
+                    <li>Entrar por la zona del zoo (entrada gratis)</li>
+                    <li>Caminar hacia el lago</li>
+                    <li>Buscar la vista del skyline desde el norte — clave</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Almuerzo — Mr. Beef</div>
+                <ul class="steps">
+                    <li>Pedir: <strong>Italian Beef Sandwich</strong></li>
+                    <li>Ir fuera del horario pico</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Tarde — Tour de Arquitectura</div>
+                <ul class="steps">
+                    <li>Empresa: <strong>Wendella</strong></li>
+                    <li>Llegar 30 min antes</li>
+                    <li>Elegir horario con sunset</li>
+                    <li>Ubicación: Riverwalk (cerca del almuerzo)</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Atardecer — 360 Chicago 🏙</div>
+                <ul class="steps">
+                    <li>Queda perfecto después del tour — ambos están en el Loop/Magnificent Mile</li>
+                    <li>Subir 30–45 min antes del sunset para la luz ideal</li>
+                    <li>Mejor vista del lago Michigan + skyline desde arriba</li>
+                    <li>Desde el Wendella: tomar el subte o Uber (5–10 min) hacia el norte por la Mag Mile</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Noche — River North</div>
+                <ul class="steps">
+                    <li>Rooftop con vista (ideal)</li>
+                    <li>Bares según energía del grupo</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="map-legend">
+            <div class="leg-item"><div class="leg-dot" style="background:#1a2744;"></div> Atracción</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#d97706;"></div> Gastronomía</div>
+        </div>
+        <div class="map-wrap" id="map-chi-2"></div>
+
+        <div class="sep"></div>
+
+        <!-- DÍA 3 -->
+        <div class="day-header">
+            <div class="day-num">03</div>
+            <div class="day-meta">
+                <h2>Lunes — Zonas Locales</h2>
+                <p class="day-sub">Explorar fuera del circuito turístico</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="objective">Objetivo: Explorar fuera del circuito turístico</div>
+
+            <div class="block">
+                <div class="block-title">Mañana — Hyde Park</div>
+                <div class="transport">🚗 Uber recomendado (15–20 min)</div>
+                <div class="route-label">Mapa lógico: Campus → calles cercanas → Jackson Park</div>
+                <ul class="steps">
+                    <li>Recorrer <strong>University of Chicago</strong> — arquitectura tipo europea</li>
+                    <li>Caminar sin rumbo fijo (zona segura y tranquila)</li>
+                    <li>Sumar Jackson Park si hay tiempo</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Mediodía — Pilsen</div>
+                <div class="transport">🚗 Uber (~15 min)</div>
+                <div class="route-label">Mapa lógico: Murales → calle principal → comida</div>
+                <ul class="steps">
+                    <li>Buscar murales (están por todo el barrio)</li>
+                    <li>Elegir restaurante donde haya gente local</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Tarde — Tiempo libre / A definir</div>
+                <ul class="tips">
+                    <li>Volver a la zona favorita del viaje</li>
+                    <li>Opción: Magnificient Mile para recorrer o compras</li>
+                    <li>Opción: Wicker Park — barrio bohemio con galerías, tiendas locales y buena gastronomía</li>
+                    <li>Descansar antes de la última noche</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Cena</div>
+                <ul class="tips">
+                    <li><strong>Quartino</strong> — italiano, ideal para compartir platos</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="map-legend">
+            <div class="leg-item"><div class="leg-dot" style="background:#1a2744;"></div> Atracción</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#d97706;"></div> Gastronomía</div>
+        </div>
+        <div class="map-wrap" id="map-chi-3"></div>
+
+        <div class="sep"></div>
+
+        <!-- DÍA 4 -->
+        <div class="day-header">
+            <div class="day-num">04</div>
+            <div class="day-meta">
+                <h2>Martes — Día de vuelta ✈️</h2>
+                <p class="day-sub">Salida desde O'Hare — vuelo 11:00 AM</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="objective">✈️ Vuelo: 11:00 AM desde O'Hare International Airport (ORD)</div>
+
+            <div class="block">
+                <div class="block-title">Horario de salida</div>
+                <div class="highlight">
+                    <p class="hl-label">Llegar al aeropuerto</p>
+                    <p>Mínimo <strong>2 horas antes</strong> del vuelo → estar en O'Hare a las <strong>9:00 AM</strong><br>
+                    Salir del alojamiento: <strong>7:45 – 8:00 AM</strong> como máximo (con margen)</p>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Opción 1 — Uber directo 🚗</div>
+                <ul class="tips">
+                    <li>Tiempo: <strong>35–55 min</strong> desde el centro (sin tráfico de punta)</li>
+                    <li>Costo: <strong>USD 40–60</strong> total</li>
+                    <li>Sin trasbordos, con equipaje, cómodo</li>
+                    <li>Pedir el Uber con 5–10 min de anticipación — no esperar al último momento</li>
+                </ul>
+                <div class="warning">
+                    <p>⚠️ A las 8am puede haber tráfico en la I-90/I-94. Pedir el viaje antes de las 7:50am para salir con margen.</p>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Opción 2 — Blue Line (subte) 🚇</div>
+                <ul class="steps">
+                    <li>Uber/caminata desde el alojamiento hasta la estación <strong>UIC–Halsted</strong> (Blue Line)</li>
+                    <li>Desde UIC–Halsted: tomar la <strong>Blue Line directo a O'Hare</strong> — sin trasbordos</li>
+                    <li>Tiempo total puerta a puerta: <strong>1 h – 1 h 15 min</strong></li>
+                    <li>Costo total: <strong>USD 20–35</strong> (Uber corto + boleto subte ~$2.50)</li>
+                </ul>
+                <div class="highlight">
+                    <p class="hl-label">¿Por qué UIC–Halsted y no otra estación?</p>
+                    <p>Es mucho más fácil que hacer combinaciones desde el centro. La Blue Line sale desde esa estación directa a O'Hare sin cambios — más eficiente con equipaje.</p>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="block-title">¿Cuál elegir?</div>
+                <ul class="tips">
+                    <li><strong>Uber directo</strong>: si viajan con equipaje grande, hay más de 2 personas o prefieren comodidad sin pensar</li>
+                    <li><strong>Blue Line</strong>: si el presupuesto importa y viajan liviano — ahorra ~$25 por trayecto y es confiable (no le afecta el tráfico)</li>
+                    <li>Para un vuelo a las 11am saliendo a las 8am, cualquiera de las dos opciones llega bien</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="sep"></div>
+        <p class="sec-label">Consejos generales</p>
+        <div class="tips-grid">
+            <div class="tip-card">
+                <div class="tip-icon">🚇</div>
+                <div class="tip-text">Usar CTA — Red Line como eje principal</div>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">🚗</div>
+                <div class="tip-text">Uber de noche para mayor comodidad</div>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">🧥</div>
+                <div class="tip-text">Clima variable — llevar abrigo liviano</div>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">🎯</div>
+                <div class="tip-text">Disfrutar zonas más que tachar lugares</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ══════════════════ SEATTLE ══════════════════ -->
+<div id="seattle" class="city-view">
+    <div class="city-intro">
+        <span class="city-tag">Día 2</span>
+        <h1>Seattle</h1>
+        <p>Recorrido en línea lógica — sin volver sobre tus pasos</p>
+    </div>
+
+    <div class="container">
+
+        <div class="day-header">
+            <div class="day-num">02</div>
+            <div class="day-meta">
+                <h2>Recorrido Central</h2>
+                <p class="day-sub">Pike Place · Waterfront · Space Needle · Kerry Park</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="block">
+                <div class="block-title"><span class="time-pill">08:30</span> Salida</div>
+                <div class="transport">🚆 Link Light Rail → bajar en <strong>Westlake</strong></div>
+            </div>
+
+            <div class="block">
+                <div class="block-title"><span class="time-pill">09:00</span> Pike Place Market + Starbucks Original</div>
+                <ul class="steps">
+                    <li>Llegar directo a <strong>Pike Place Market</strong></li>
+                    <li>El <strong>Original Starbucks Store</strong> está dentro del mercado — fila posible de 30–60 min</li>
+                </ul>
+                <div class="options">
+                    <div class="opt opt-green">
+                        <div class="opt-label">Recomendada</div>
+                        Pasás, ves el lugar, sacás foto — comprás café en otro Starbucks cercano. Mismo café, 10% del tiempo.
+                    </div>
+                    <div class="opt opt-yellow">
+                        <div class="opt-label">Alternativa</div>
+                        Hacer la fila bien temprano (por eso lo pusimos primero en el día)
+                    </div>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Recorrido dentro del mercado</div>
+                <div class="route-label">Mapa lógico</div>
+                <ul class="steps">
+                    <li>Recorrés el interior del mercado</li>
+                    <li>Bajás hacia el <strong>Seattle Waterfront</strong></li>
+                    <li><strong>Seattle Great Wheel</strong> — rueda icónica sobre el muelle</li>
+                </ul>
+                <ul class="tips" style="margin-top:8px;">
+                    <li>Todo en bajada — fluido, sin volver atrás</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="block">
+                <div class="block-title"><span class="time-pill">12:30</span> Traslado a Seattle Center</div>
+                <div class="transport">🚶 Caminata 25–30 min &nbsp;·&nbsp; o <strong>Monorail</strong></div>
+            </div>
+
+            <div class="block">
+                <div class="block-title"><span class="time-pill">13:00</span> Space Needle + Chihuly Garden and Glass</div>
+                <ul class="steps">
+                    <li><strong>Space Needle</strong> — mirador icónico de Seattle</li>
+                    <li><strong>Chihuly Garden and Glass</strong> — arte en vidrio soplado impresionante</li>
+                </ul>
+                <div class="highlight" style="margin-top:13px;">
+                    <p class="hl-label">Si hay que elegir uno</p>
+                    <p>Chihuly Garden and Glass — la experiencia vale más</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="block">
+                <div class="block-title"><span class="time-pill">16:30</span> Kerry Park</div>
+                <ul class="tips">
+                    <li>La mejor vista de Seattle — Space Needle + skyline + Mount Rainier</li>
+                    <li>Llegar con luz para fotos al atardecer</li>
+                </ul>
+            </div>
+
+            <div class="block">
+                <div class="block-title">Noche</div>
+                <ul class="tips">
+                    <li>Cena en la zona</li>
+                    <li>Vuelta en Light Rail o Uber</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="map-legend">
+            <div class="leg-item"><div class="leg-dot" style="background:#1a2744;"></div> Atracción</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#c9a84c;"></div> Transporte / inicio</div>
+        </div>
+        <div class="map-wrap" id="map-sea-2"></div>
+
+        <div class="flow-bar">
+            <span class="flow-stop">Tren</span><span class="flow-arr">→</span>
+            <span class="flow-stop">Starbucks</span><span class="flow-arr">→</span>
+            <span class="flow-stop">Mercado</span><span class="flow-arr">→</span>
+            <span class="flow-stop">Waterfront</span><span class="flow-arr">→</span>
+            <span class="flow-stop">Seattle Center</span><span class="flow-arr">→</span>
+            <span class="flow-stop">Kerry Park</span><span class="flow-arr">→</span>
+            <span class="flow-stop">Cena</span>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ══════════════════ LOS ÁNGELES ══════════════════ -->
+<div id="losangeles" class="city-view">
+
+    <div class="city-intro">
+        <div class="city-tag">Los Ángeles · California</div>
+        <h1>Los <em style="font-style:italic;color:var(--gold)">Ángeles</em></h1>
+        <p>Llegada + 3 días completos · Base en Marina del Rey · Auto propio</p>
+    </div>
+
+    <!-- NOCHE DE LLEGADA -->
+    <div class="la-day-band">
+        <div class="la-day-band-label">Noche de llegada</div>
+        <h2 class="la-day-band-title">Santa Monica Pier</h2>
+        <p class="la-day-band-sub">Primer contacto con el océano Pacífico</p>
+        <div class="la-day-band-tags">
+            <span class="la-day-band-tag">Desde Marina del Rey</span>
+            <span class="la-day-band-tag">Sin reservas</span>
+            <span class="la-day-band-tag">~2 horas</span>
+        </div>
+        <div class="la-day-band-num" aria-hidden="true">0</div>
+    </div>
+
+    <div class="la-section">
+        <div class="la-parking-box">
+            <div class="la-parking-icon">🅿️</div>
+            <div>
+                <div class="la-parking-title">Estacionamiento en Santa Monica</div>
+                <p class="la-parking-text">
+                    <strong>Lot 1 North (PCH & Colorado):</strong> El más cercano al Pier. ~$15 el día, abre hasta las 2am.<br><br>
+                    <strong>Civic Center Structure (4th St & Colorado Ave):</strong> A 5 minutos a pie. ~$8 por la noche.<br><br>
+                    <strong>Evitá</strong> estacionamiento en calle con límite de 1-2hs.
+                </p>
+            </div>
+        </div>
+        <div class="la-map-container">
+            <div class="la-map-label">
+                <span class="la-map-label-text">Mapa</span>
+                <span class="la-map-label-title">Santa Monica Pier & zona de llegada</span>
+            </div>
+            <div id="la-map-dia0" style="width:100%;height:320px;"></div>
+        </div>
+        <div class="la-timeline">
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">19:30 — Llegada</div>
+                <div class="la-tl-card">
+                    <span class="la-badge la-badge-place">🅿️ Parking</span>
+                    <div class="la-tl-name">Estacionarse en Lot 1 North o Civic Center</div>
+                    <p class="la-tl-notes">Desde Marina del Rey son menos de 15 minutos. Llegá directo al muelle sin dar vueltas buscando calle.</p>
+                </div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">19:45</div>
+                <div class="la-tl-card">
+                    <span class="la-badge la-badge-place">🎡 Atracción</span>
+                    <div class="la-tl-name">Santa Monica Pier</div>
+                    <p class="la-tl-notes">El primer impacto de LA: el muelle de noche con las luces de Pacific Park, el cartel del fin de la Ruta 66, el sonido del océano.</p>
+                </div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">20:15 — Cena</div>
+                <div class="la-tl-card">
+                    <span class="la-badge la-badge-food">🍽 2 opciones de cena</span>
+                    <div class="la-tl-name">The Albright o Maria Sol</div>
+                    <p class="la-tl-notes"><strong>The Albright</strong> (~$20-28): El mejor restaurante del Pier. Mariscos frescos, sin reserva.<br><strong>Maria Sol</strong> (~$15-22): Mexicano con deck sobre el océano. Tacos de langosta, margaritas.</p>
+                    <div class="la-tip-box">⚠️ <strong>Evitá Seaside on the Pier</strong> — mala relación calidad-precio.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="la-section-divider"></div>
+
+    <!-- DÍA 1 -->
+    <div class="la-day-band">
+        <div class="la-day-band-label">Día 1 — Hollywood Clásico</div>
+        <h2 class="la-day-band-title">Griffith · Warner Bros · Beverly Hills</h2>
+        <p class="la-day-band-sub">El día más icónico para una primera vez en LA</p>
+        <div class="la-day-band-tags">
+            <span class="la-day-band-tag">Griffith Observatory</span>
+            <span class="la-day-band-tag">Hollywood Sign</span>
+            <span class="la-day-band-tag">Warner Bros</span>
+            <span class="la-day-band-tag">Walk of Fame</span>
+            <span class="la-day-band-tag">Beverly Hills</span>
+            <span class="la-day-band-tag">LACMA Urban Light</span>
+        </div>
+        <div class="la-day-band-num" aria-hidden="true">1</div>
+    </div>
+    <div class="la-section">
+        <div class="la-tip-box">⚠️ <strong>Importante:</strong> El Griffith cierra los <strong>lunes</strong>. Warner Bros. requiere <strong>reserva previa</strong> en wbstudiotour.com (~$70/persona).</div>
+        <div class="la-map-container" style="margin-top:20px;">
+            <div class="la-map-label">
+                <span class="la-map-label-text">Mapa</span>
+                <span class="la-map-label-title">Griffith · Warner Bros · Beverly Hills · LACMA</span>
+            </div>
+            <div id="la-map-dia1" style="width:100%;height:320px;"></div>
+        </div>
+        <div class="la-timeline">
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">10:00 AM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🔭 Gratis</span><div class="la-tl-name">Griffith Observatory</div><p class="la-tl-notes">Vistas panorámicas de LA, el letrero de Hollywood y el planetario. Llegar temprano — el parking se llena rápido. Abre a las 10am fines de semana, 12pm días de semana.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">11:30 AM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">📸 Mirador Gratis</span><div class="la-tl-name">Hollywood Sign Lookout — 3115 Canyon Lake Dr</div><p class="la-tl-notes">El mejor mirador del cartel: grande, nítido, sin obstáculos. Bajando del Griffith queda de camino perfecto.</p><div class="la-tip-box">💡 Superior al de Beachwood Canyon. Muy pocas guías lo mencionan.</div></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">12:30 PM — 3:00 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-tour">🎬 ~$70/persona</span><div class="la-tl-name">Warner Bros. Studio Tour Hollywood</div><p class="la-tl-notes">2-2:30hs por sets reales: Friends, Harry Potter, DC Comics. Guía en vivo. En Burbank, a 15 min del mirador.</p><div class="la-tip-box">⚠️ <strong>Reservar con anticipación</strong> en wbstudiotour.com</div></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">3:30 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">⭐ Gratis</span><div class="la-tl-name">Hollywood Walk of Fame & TCL Chinese Theatre</div><p class="la-tl-notes">Las estrellas en Hollywood Blvd y las huellas de manos. Dedicar 45-60 minutos.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">5:00 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">💎 Beverly Hills</span><div class="la-tl-name">Beverly Hills Sign & Rodeo Drive</div><p class="la-tl-notes">Foto del cartel, caminata por Rodeo Drive y las mansiones. Primeras 2hs de estacionamiento gratis en la Beverly Hills Library.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">7:00 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🌟 Gratis 24hs</span><div class="la-tl-name">Urban Light — LACMA</div><p class="la-tl-notes">202 lámparas vintage frente al LACMA. Una de las imágenes más icónicas de LA, especialmente de noche.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">7:45 PM — Cena</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-food">🥩 ~$18-25/persona</span><div class="la-tl-name">Canter's Deli — Fairfax Ave</div><p class="la-tl-notes">Diner judío histórico desde 1931, a 5 min del LACMA. El pastrami más famoso de LA. Abierto hasta tarde.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="la-section-divider"></div>
+
+    <!-- DÍA 2 -->
+    <div class="la-day-band">
+        <div class="la-day-band-label">Día 2 — Malibu Completo</div>
+        <h2 class="la-day-band-title">PCH · Playas · Cañones</h2>
+        <p class="la-day-band-sub">La carretera costera más bella de California</p>
+        <div class="la-day-band-tags">
+            <span class="la-day-band-tag">El Matador Beach</span>
+            <span class="la-day-band-tag">Point Dume</span>
+            <span class="la-day-band-tag">Malibu Creek</span>
+            <span class="la-day-band-tag">Neptune's Net</span>
+        </div>
+        <div class="la-day-band-num" aria-hidden="true">2</div>
+    </div>
+    <div class="la-section">
+        <div class="la-map-container">
+            <div class="la-map-label">
+                <span class="la-map-label-text">Mapa</span>
+                <span class="la-map-label-title">Malibu — PCH de punta a punta</span>
+            </div>
+            <div id="la-map-dia2" style="width:100%;height:320px;"></div>
+        </div>
+        <div class="la-timeline">
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">9:00 AM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🏖 $10 parking</span><div class="la-tl-name">El Matador State Beach</div><p class="la-tl-notes">La playa más fotogénica de California: arcos de roca, cuevas y olas dramáticas. Llegar temprano — el parking se llena antes de las 10am.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">12:00 PM — Almuerzo</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-food">🦞 ~$15-20/persona</span><div class="la-tl-name">Malibu Seafood Fresh Fish Market</div><p class="la-tl-notes">Clásico de la PCH: mariscos muy frescos a buen precio. Se pide en mostrador, se come con vista al mar.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">1:30 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🦅 Mirador</span><div class="la-tl-name">Point Dume State Beach</div><p class="la-tl-notes">Subí al promontorio para vistas panorámicas de toda la bahía de Malibu. Una de las mejores postales de la costa californiana.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">3:30 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🎬 $12 parking</span><div class="la-tl-name">Malibu Creek State Park</div><p class="la-tl-notes">El cañón donde se filmó M*A*S*H. Caminata fácil de 3km. Paisaje completamente diferente al de la costa.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">6:00 PM — Cena</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-food">🦐 ~$15-22/persona</span><div class="la-tl-name">Neptune's Net</div><p class="la-tl-notes">El local más mítico de la PCH. Mariscos fritos, langostas y el océano enfrente. El favorito de moteros y surfistas.<div class="la-tip-box">💡 Perfecto para ver el atardecer. El regreso por la PCH de noche es muy bonito.</div></p></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="la-section-divider"></div>
+
+    <!-- DÍA 3 -->
+    <div class="la-day-band">
+        <div class="la-day-band-label">Día 3 — El más relajado</div>
+        <h2 class="la-day-band-title">Casas Famosas · Venice · Santa Monica</h2>
+        <p class="la-day-band-sub">Tour de celebridades, playa, atardecer y cierre del viaje</p>
+        <div class="la-day-band-tags">
+            <span class="la-day-band-tag">Famous House Tour</span>
+            <span class="la-day-band-tag">Venice Skatepark</span>
+            <span class="la-day-band-tag">Abbot Kinney</span>
+            <span class="la-day-band-tag">Atardecer SM</span>
+        </div>
+        <div class="la-day-band-num" aria-hidden="true">3</div>
+    </div>
+    <div class="la-section">
+        <div class="la-map-container">
+            <div class="la-map-label">
+                <span class="la-map-label-text">Mapa</span>
+                <span class="la-map-label-title">Hollywood · Beverly Hills · Venice · Santa Monica</span>
+            </div>
+            <div id="la-map-dia3" style="width:100%;height:320px;"></div>
+        </div>
+        <div class="la-timeline">
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">10:00 AM — 12:30 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-tour">🏡 ~$30-40/persona</span><div class="la-tl-name">Famous House Tours — Hollywood Blvd</div><p class="la-tl-notes">Salen constantemente desde Hollywood Blvd (cerca de Highland Ave). Minibús descapotable, ~2hs. Beverly Hills, Bel Air, Sunset Strip. Sin reserva.<div class="la-tip-box">💡 Salí temprano — menos tráfico y mejor luz.</div></p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">12:30 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🏘 En auto</span><div class="la-tl-name">Beverly Hills — Calles residenciales</div><p class="la-tl-notes">Mulholland Drive (vistas increíbles), Sunset Blvd entre BH y Bel Air, o el barrio Old Hollywood cerca de Doheny Dr.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">2:30 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🛹 Gratis</span><div class="la-tl-name">Venice Skatepark & Boardwalk</div><p class="la-tl-notes">Pros locales, el océano de fondo. Caminá el Boardwalk: murales, Muscle Beach, artistas callejeros. El espíritu real de LA.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">4:00 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">☕ Parada</span><div class="la-tl-name">Gjusta — Venice</div><p class="la-tl-notes">La mejor panadería-deli de Venice. Café de especialidad, croissants. Ojo: cierra a las 4pm, calculá llegar antes.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">5:30 PM</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-place">🌅 Gratis</span><div class="la-tl-name">Atardecer — Santa Monica Beach</div><p class="la-tl-notes">El mejor atardecer de LA: en la arena frente al Pier mientras el sol cae sobre el Pacífico.</p></div>
+            </div>
+            <div class="la-tl-item"><div class="la-tl-dot"></div>
+                <div class="la-tl-time">7:30 PM — Cena final</div>
+                <div class="la-tl-card"><span class="la-badge la-badge-food">🍷 Cena de cierre</span><div class="la-tl-name">Abbot Kinney o The Albright</div><p class="la-tl-notes"><strong>Abbot Kinney Blvd</strong> (~$25-35): La calle más cool de Venice, restaurantes de autor.<br><strong>The Albright</strong> (~$20-28): Terminar en el Pier donde empezó todo.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="la-section-divider"></div>
+
+    <!-- GASTRONOMÍA -->
+    <div class="la-section">
+        <div class="sec-label">Dónde comer</div>
+        <div class="la-food-grid">
+            <div class="la-food-card eco"><div class="la-food-price">🟢 Económico</div><div class="la-food-name">In-N-Out Burger</div><div class="la-food-range">~$8-12/persona</div><p class="la-food-desc">La hamburguesa icónica de California. Local en Sepulveda Blvd frente al hotel. Pedí Double Double Animal Style.</p></div>
+            <div class="la-food-card eco"><div class="la-food-price">🟢 Económico</div><div class="la-food-name">Malibu Seafood</div><div class="la-food-range">~$15-20/persona</div><p class="la-food-desc">Clásico de la PCH. Mariscos frescos a buen precio, fish & chips legendario, pedir en mostrador.</p></div>
+            <div class="la-food-card eco"><div class="la-food-price">🟢 Económico</div><div class="la-food-name">Neptune's Net</div><div class="la-food-range">~$15-22/persona</div><p class="la-food-desc">El local más auténtico de la PCH. Mariscos fritos frente al mar. Cena Día 2 al atardecer.</p></div>
+            <div class="la-food-card eco"><div class="la-food-price">🟢 Económico</div><div class="la-food-name">Maria Sol</div><div class="la-food-range">~$15-22/persona</div><p class="la-food-desc">Mexicano con deck sobre el océano en el Pier. Tacos de langosta, margaritas. Sin reserva.</p></div>
+            <div class="la-food-card mid"><div class="la-food-price">🟡 Medio</div><div class="la-food-name">The Albright</div><div class="la-food-range">~$20-28/persona</div><p class="la-food-desc">El mejor restaurante del Pier de Santa Monica. Mariscos frescos, sin reserva.</p></div>
+            <div class="la-food-card mid"><div class="la-food-price">🟡 Medio</div><div class="la-food-name">Canter's Deli</div><div class="la-food-range">~$18-25/persona</div><p class="la-food-desc">Diner judío histórico desde 1931 en Fairfax. El pastrami más famoso de LA. Abierto hasta tarde.</p></div>
+            <div class="la-food-card top"><div class="la-food-price">🟠 Algo más</div><div class="la-food-name">Abbot Kinney (zona)</div><div class="la-food-range">~$25-35/persona</div><p class="la-food-desc">La calle más cool de Venice con restaurantes de autor. Cierre del Día 3.</p></div>
+            <div class="la-food-card top"><div class="la-food-price">🟠 Desayuno/merienda</div><div class="la-food-name">Gjusta</div><div class="la-food-range">~$15-22/persona</div><p class="la-food-desc">Mejor panadería-deli de Venice. Croissants, bagels con salmón, shakshuka. Cierra 4pm.</p></div>
+        </div>
+        <div class="warning"><p>💡 <strong>Estrategia:</strong> Almuerzos económicos (In-N-Out, tacos, Malibu Seafood) para reservar presupuesto para las cenas, que son las experiencias más memorables del día.</p></div>
+    </div>
+
+</div><!-- /losangeles -->
+
+
+<!-- ══════════════════ ROADTRIP ══════════════════ -->
+<div id="roadtrip" class="city-view">
+
+    <div class="rt-intro">
+        <div class="rt-intro-title">Davis <span>→ Los Ángeles</span></div>
+        <div class="rt-intro-sub">California Roadtrip · Por la Highway 101 · Sin peajes obligatorios</div>
+        <div class="rt-stats">
+            <div class="rt-stat"><span class="rt-stat-val">~560</span><span class="rt-stat-lbl">Millas / ~900 km</span></div>
+            <div class="rt-stat"><span class="rt-stat-val">9–10</span><span class="rt-stat-lbl">Horas de manejo</span></div>
+            <div class="rt-stat"><span class="rt-stat-val">4+1</span><span class="rt-stat-lbl">Paradas</span></div>
+            <div class="rt-stat"><span class="rt-stat-val">$0</span><span class="rt-stat-lbl">Peajes oblig.</span></div>
+        </div>
+    </div>
+
+    <div class="rt-map-wrap">
+        <div class="rt-map-header">
+            <div>
+                <div class="rt-map-title">Ruta completa del día</div>
+                <div class="rt-map-sub">Davis · SMF · Paso Robles · Solvang · Santa Bárbara · Marina del Rey</div>
+            </div>
+        </div>
+        <div id="rt-main-map" style="width:100%;height:420px;"></div>
+    </div>
+
+    <div class="rt-summary">
+        <div class="rt-summary-item">
+            <div class="rt-si-label">Ruta recomendada</div>
+            <div class="rt-si-val">I-5 → 46W → 101S</div>
+            <div class="rt-si-desc">De Sacramento tomás la I-5 sur hasta Hwy 46 Oeste. De ahí la 101 te lleva directo por la costa hasta LA.</div>
+        </div>
+        <div class="rt-summary-item">
+            <div class="rt-si-label">Estado de la ruta</div>
+            <div class="rt-si-val">Abierta ✓</div>
+            <div class="rt-si-desc">La Highway 1 reabrió en enero 2026. La 101 es la opción confiable para el día completo.</div>
+        </div>
+        <div class="rt-summary-item">
+            <div class="rt-si-label">Consejo clave</div>
+            <div class="rt-si-val">Salí puntual</div>
+            <div class="rt-si-desc">Auto recogido a las 11:30am, llegada a Marina del Rey ~9pm. Margen ajustado pero cómodo.</div>
+        </div>
+    </div>
+
+    <div class="rt-stops">
+        <div class="rt-eyebrow">Las paradas del día</div>
+
+        <!-- DAVIS -->
+        <div class="rt-stop" id="rt-stop-davis">
+            <div class="rt-stop-left"><div class="rt-marker start">🏠</div><div class="rt-connector"></div></div>
+            <div class="rt-body">
+                <span class="rt-time-badge">~9:30 AM · Punto de partida</span>
+                <div class="rt-stop-title">Davis, California</div>
+                <div class="rt-stop-subtitle">University town — el inicio</div>
+                <p class="rt-stop-desc">Salís de Davis rumbo al aeropuerto por la I-80 Este — autopista directa, 25 minutos. Desayuná antes de salir.</p>
+                <div class="rt-tags"><span class="rt-tag">Davis → SMF: 25 min</span><span class="rt-tag hl">Salida temprana</span></div>
+            </div>
+        </div>
+        <div class="rt-drive"><div class="rt-drive-left"><div class="rt-drive-icon">🚗</div><div class="rt-drive-line"></div></div><div class="rt-drive-body"><div class="rt-dist">22 mi <span style="font-size:12px;opacity:0.45;">/ 35 km</span></div><div class="rt-dist-info">I-80 Este · 25 minutos</div></div></div>
+
+        <!-- SMF -->
+        <div class="rt-stop" id="rt-stop-smf">
+            <div class="rt-stop-left"><div class="rt-marker start">✈</div><div class="rt-connector"></div></div>
+            <div class="rt-body">
+                <span class="rt-time-badge">11:00 AM · ~45-60 min</span>
+                <div class="rt-stop-title">Sacramento Intl. Airport (SMF)</div>
+                <div class="rt-stop-subtitle">Recogida del auto de alquiler</div>
+                <p class="rt-stop-desc">Counters de rent-a-car en Terminal B, nivel inferior. 30-45 min de trámite. Salida estimada: 11:45 AM – 12:00 PM.</p>
+                <div class="rt-tip">💡 <strong>Antes de salir:</strong> Cargá nafta, confirmá Google Maps o Waze, guardá el número de la empresa.</div>
+                <div class="rt-tags"><span class="rt-tag hl">Salida destino Paso Robles: ~12:00 PM</span><span class="rt-tag">I-5 Sur → Hwy 46 Oeste</span></div>
+            </div>
+        </div>
+        <div class="rt-drive"><div class="rt-drive-left"><div class="rt-drive-icon">🛣</div><div class="rt-drive-line"></div></div><div class="rt-drive-body"><div class="rt-dist">~270 mi <span style="font-size:12px;opacity:0.45;">/ ~435 km</span></div><div class="rt-dist-info">I-5 Sur + Hwy 46 Oeste · ~4:40 hs · Llegada ~4:30 PM</div></div></div>
+
+        <!-- PASO ROBLES -->
+        <div class="rt-stop" id="rt-stop-paso">
+            <div class="rt-stop-left"><div class="rt-marker wine">🍷</div><div class="rt-connector"></div></div>
+            <div class="rt-body">
+                <span class="rt-time-badge">~4:30 PM · 60-75 min</span>
+                <div class="rt-stop-title">Paso Robles</div>
+                <div class="rt-stop-subtitle">Corazón vinícola de la Central Coast</div>
+                <p class="rt-stop-desc">Más de 200 bodegas en colinas de robles. Downtown histórico para estirar las piernas y tomar algo.</p>
+                <div class="rt-tip">🍷 <strong>60-75 min:</strong> Caminá el City Park, tomá un café o vino en el downtown (Tin City Cider Co. o Paso Wine Merchants). No te metas en rutas de bodegas.</div>
+                <div class="rt-tags"><span class="rt-tag">Downtown histórico</span><span class="rt-tag">Vinos locales</span><span class="rt-tag hl">No más de 75 min</span></div>
+            </div>
+        </div>
+        <div class="rt-drive"><div class="rt-drive-left"><div class="rt-drive-icon">🛣</div><div class="rt-drive-line"></div></div><div class="rt-drive-body"><div class="rt-dist">~40 mi <span style="font-size:12px;opacity:0.45;">/ ~64 km</span></div><div class="rt-dist-info">Hwy 101 Sur → Hwy 246 → Solvang · ~50 min</div></div></div>
+
+        <!-- PISMO VARIANTE -->
+        <div class="rt-stop" style="opacity:1;">
+            <div class="rt-stop-left"><div class="rt-marker coast">🌊</div><div class="rt-connector"></div></div>
+            <div class="rt-body" style="border-color:rgba(91,159,184,0.2);background:rgba(30,27,24,0.7);">
+                <span class="rt-time-badge" style="background:rgba(91,143,168,0.15);color:#7AACBF;">VARIANTE · ~3:30 PM · 30-45 min</span>
+                <div class="rt-stop-title" style="color:#7AACBF;">Pismo Beach</div>
+                <div class="rt-stop-subtitle">Parada alternativa — la más costera y visual de la ruta</div>
+                <p class="rt-stop-desc">El muelle histórico de 1.200 pies (1928), 17 millas de playa y el famoso clam chowder. El momento en que la 101 revela el Pacífico es uno de los mejores del viaje.</p>
+                <div class="rt-tip" style="border-color:#7AACBF;background:rgba(91,143,168,0.08);">🌊 <strong>¿Paso Robles o Pismo?</strong> Elegí Paso Robles para cultura vinícola; Pismo para ver el océano y algo más visual. Hacé las dos si salís temprano — son 30 min de diferencia.</div>
+                <div class="rt-tags"><span class="rt-tag" style="border-color:rgba(91,159,184,0.3);color:#7AACBF;">Pismo Beach Pier</span><span class="rt-tag" style="border-color:rgba(91,159,184,0.3);color:#7AACBF;">Clam chowder</span><span class="rt-tag" style="border-color:rgba(91,159,184,0.3);color:#7AACBF;">Primer Pacífico</span></div>
+            </div>
+        </div>
+        <div class="rt-drive"><div class="rt-drive-left"><div class="rt-drive-icon">🛣</div><div class="rt-drive-line" style="background:repeating-linear-gradient(to bottom,rgba(91,143,168,0.28) 0,rgba(91,143,168,0.28) 8px,transparent 8px,transparent 18px);"></div></div><div class="rt-drive-body"><div class="rt-dist" style="color:rgba(91,143,168,0.55);">~65 mi <span style="font-size:12px;opacity:0.45;">/ ~105 km</span></div><div class="rt-dist-info">Pismo → Solvang: 101 Sur → Hwy 246 · ~1:20 hs</div></div></div>
+
+        <!-- SOLVANG -->
+        <div class="rt-stop" id="rt-stop-solvang">
+            <div class="rt-stop-left"><div class="rt-marker danish">⚓</div><div class="rt-connector"></div></div>
+            <div class="rt-body">
+                <span class="rt-time-badge">~6:00 PM · 45-60 min</span>
+                <div class="rt-stop-title">Solvang</div>
+                <div class="rt-stop-subtitle">El pueblo danés de California — molinos, pasteles y arquitectura única</div>
+                <p class="rt-stop-desc">Fundado en 1911 por inmigrantes daneses: arquitectura de media madera, molinos de viento, panaderías con aebleskivers. Tan fuera de lugar en California que resulta completamente encantador.</p>
+                <div class="rt-tip">🥐 <strong>Imperdible:</strong> Olsen's Danish Village Bakery o Birkholm's Bakery para llevar algo. Caminá Copenhagen Dr. completa — 15 minutos.</div>
+                <div class="rt-tags"><span class="rt-tag">Arquitectura danesa</span><span class="rt-tag">Molinos de viento</span><span class="rt-tag hl">Foto icónica del trip</span></div>
+            </div>
+        </div>
+        <div class="rt-drive"><div class="rt-drive-left"><div class="rt-drive-icon">🛣</div><div class="rt-drive-line"></div></div><div class="rt-drive-body"><div class="rt-dist">~35 mi <span style="font-size:12px;opacity:0.45;">/ ~56 km</span></div><div class="rt-dist-info">Hwy 246 → Hwy 154 → Santa Bárbara · ~45 min</div></div></div>
+
+        <!-- SANTA BARBARA -->
+        <div class="rt-stop" id="rt-stop-sb">
+            <div class="rt-stop-left"><div class="rt-marker city">🌴</div><div class="rt-connector"></div></div>
+            <div class="rt-body">
+                <span class="rt-time-badge">~7:00 PM · 45-60 min — Cena</span>
+                <div class="rt-stop-title">Santa Bárbara</div>
+                <div class="rt-stop-subtitle">La Riviera Americana — arquitectura española, costa y atardecer</div>
+                <p class="rt-stop-desc">Arquitectura colonial española blanca, palmeras altísimas, el océano y las montañas. A las 7pm hay hermosa luz para las últimas fotos del día.</p>
+                <div class="rt-tip">🍽 <strong>Cenar:</strong> Santa Barbara Public Market (38 W. Victoria St.) — mercado gourmet ~$15-20/persona. O State Street para sentarse en restaurante.</div>
+                <div class="rt-tip" style="border-color:#7AACBF;">🌊 <strong>Si llegás antes (6:30pm):</strong> Stearns Wharf a 5 min — caminata corta con vistas al mar, 15 minutos.</div>
+                <div class="rt-tags"><span class="rt-tag">Stearns Wharf</span><span class="rt-tag">State Street</span><span class="rt-tag hl">Última parada antes de LA</span></div>
+            </div>
+        </div>
+        <div class="rt-drive"><div class="rt-drive-left"><div class="rt-drive-icon">🌙</div><div class="rt-drive-line"></div></div><div class="rt-drive-body"><div class="rt-dist">~95 mi <span style="font-size:12px;opacity:0.45;">/ ~153 km</span></div><div class="rt-dist-info">Hwy 101 Sur (no tomar PCH/Malibu) · ~1:45 hs · Llegada ~9:00 PM</div></div></div>
+
+        <!-- MARINA DEL REY -->
+        <div class="rt-stop" id="rt-stop-la">
+            <div class="rt-stop-left"><div class="rt-marker end">★</div></div>
+            <div class="rt-body">
+                <span class="rt-time-badge">~9:00 PM · Destino final</span>
+                <div class="rt-stop-title">Marina del Rey — Los Ángeles</div>
+                <div class="rt-stop-subtitle">Llegada al alojamiento · El roadtrip terminó</div>
+                <p class="rt-stop-desc">No tomes la PCH/Malibu de noche — más lento y Malibu ya lo tenés para otro día. La 101 → 405 → Lincoln Blvd te deja directo.</p>
+                <div class="rt-tip">🏨 <strong>Mañana:</strong> Primera salida — Santa Monica Pier a las 7:30pm. Dormí bien.</div>
+                <div class="rt-tags"><span class="rt-tag hl">¡Llegaste!</span><span class="rt-tag">101 → 405 → Lincoln Blvd</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PEAJES -->
+    <div class="rt-tolls">
+        <div class="rt-tolls-inner">
+            <div class="rt-eyebrow">Peajes en la ruta</div>
+            <div class="rt-tolls-grid">
+                <div class="rt-toll-card free">
+                    <div class="rt-toll-label">✅ Resultado principal</div>
+                    <div class="rt-toll-val">$0 peajes obligatorios</div>
+                    <p class="rt-toll-desc">La ruta completa Davis → SMF → I-5 → Paso Robles → Solvang → Santa Bárbara → Marina del Rey no tiene ningún peaje obligatorio. I-5, Hwy 101 y Hwy 46 son completamente gratuitas.</p>
+                </div>
+                <div class="rt-toll-card opt">
+                    <div class="rt-toll-label">⚡ Express Lanes opcionales (solo al llegar a LA)</div>
+                    <div class="rt-toll-val">$3–8 opcional</div>
+                    <p class="rt-toll-desc">Al entrar a LA la I-405 tiene Express Lanes opcionales con peaje dinámico. Los carriles normales son siempre gratis.</p>
+                </div>
+                <div class="rt-toll-full">
+                    <div class="rt-toll-full-title">Cómo pagar — auto alquilado</div>
+                    <div class="rt-toll-methods">
+                        <div><div class="rt-method-title">📱 Pay-by-Plate (automático)</div><p class="rt-method-desc">Las cámaras leen la patente y el cargo va a la empresa de alquiler. Sin parar.</p></div>
+                        <div><div class="rt-method-title">💳 Tarifa de la empresa</div><p class="rt-method-desc">Hertz, Enterprise, etc. cobran $3.95-4.95/día por sus transponders. Máximo $30 por alquiler.</p></div>
+                        <div><div class="rt-method-title">🏪 PayNearMe (efectivo)</div><p class="rt-method-desc">Pagá en 7-Eleven, CVS o Walmart. También online dentro de los 5 días del viaje.</p></div>
+                        <div><div class="rt-method-title">❌ E-ZPass NO funciona</div><p class="rt-method-desc">California usa FasTrak. E-ZPass y otros transponders de otros estados no son válidos.</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /roadtrip -->
+
+
+<!-- ══════════════════ NEW YORK ══════════════════ -->
+<div id="newyork" class="city-view">
+
+  <div class="nyc-banner">
+    <span>⚡</span>
+    <p><strong>Lógica del itinerario:</strong> Cada día está diseñado como una zona geográfica compacta para minimizar traslados. El tren desde Stamford llega a Grand Central (~55 min). Para Brooklyn y el Downtown se toma el subte directo. El Summit One Vanderbilt está <strong>a 1 cuadra de Grand Central</strong>. Nonnas: solo jueves a domingo, requiere reserva con semanas de anticipación.</p>
+  </div>
+
+  <div class="nyc-container">
+
+    <!-- DÍA 1 -->
+    <div class="nyc-day">
+      <div class="nyc-day-header">
+        <div class="nyc-day-num-block"><span class="nyc-day-num-lbl">Día</span><div class="nyc-day-num">01</div></div>
+        <div class="nyc-day-info">
+          <span class="nyc-day-weekday">Midtown · Central Park · Upper East Side</span>
+          <div class="nyc-day-title">El corazón de Manhattan</div>
+          <div class="nyc-day-tagline">Íconos en vertical, Central Park en horizontal, y el mejor atardecer desde el piso 93</div>
+        </div>
+      </div>
+      <div class="nyc-note"><span>★</span><span><em>Optimización clave:</em> Summit One Vanderbilt está en 45th & Vanderbilt, a <em>1 cuadra de Grand Central</em>. El atardecer sobre Midtown desde el piso 93 combinado con la llegada del Upper East Side hacia el sur. Times Square queda de paso natural.</span></div>
+      <div class="nyc-route">
+        <span class="nyc-route-lbl">Ruta</span>
+        <span class="nyc-stop">🚄 Grand Central</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🏛 Chrysler</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🗽 Empire State</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🥨 Flatiron</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🌺 Fifth Ave</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🎡 Rockefeller</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🚲 Central Park</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🏘 Upper East Side</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🌃 Times Square</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🔭 Summit</span>
+      </div>
+      <div class="nyc-grid">
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">08:00 – 10:30</span><span class="nyc-bdg nyc-bdg-walk">🗺 Midtown Walk</span></div><div class="nyc-block-body"><div class="nyc-block-name">Grand Central → Empire State → Flatiron</div><div class="nyc-block-desc">Arrancar desde Grand Central Terminal, bajar por Park Ave hacia el Empire State, cruzar a la 5th hasta el Flatiron.</div><ul class="nyc-tips-list"><li>Chrysler Building: ver desde la 42nd St mirando al este — mejor perspectiva</li><li>Empire State: solo exterior de mañana, sin filas ni costo</li><li>Flatiron en la intersección de Broadway y 5th Ave — muy fotogénico</li></ul><div class="nyc-block-footer"><span>⏱ ~2.5 hs</span><span>🚇 Arrivo a GCT</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">10:30 – 12:30</span><span class="nyc-bdg nyc-bdg-walk">✨ Midtown Norte</span></div><div class="nyc-block-body"><div class="nyc-block-name">Fifth Avenue + Rockefeller Center</div><div class="nyc-block-desc">Subir por 5th Avenue pasando vitrinas icónicas hasta el Rockefeller Center.</div><ul class="nyc-tips-list"><li>St. Patrick's Cathedral en 5th Ave — gratis, interior magnífico</li><li>Rockefeller Center: la plaza abajo es gratis, Top of the Rock opcional (~$40)</li><li>Apple Store (el cubo de vidrio) en 5th y 59th</li></ul><div class="nyc-block-footer"><span>⏱ ~2 hs</span><span>🚶 A pie</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">13:00 – 16:30</span><span class="nyc-bdg nyc-bdg-free">🌿 Parque</span></div><div class="nyc-block-body"><div class="nyc-block-name">Central Park en bicicleta</div><div class="nyc-block-desc">Alquilar bici (~$15/h) y recorrerlo de sur a norte. La única forma de verlo completo en pocas horas.</div><ul class="nyc-tips-list"><li>Entrar por el lado sur (59th St) y subir hacia el norte</li><li>Parar en Bethesda Fountain, The Ramble y Conservatory Garden</li><li>Bike rental: Citi Bike (app) o puestos en 59th St</li></ul><div class="nyc-block-footer"><span>⏱ ~3.5 hs</span><span>🚲 ~$15–20 bici</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">16:30 – 18:00</span><span class="nyc-bdg nyc-bdg-walk">🏘 Barrio</span></div><div class="nyc-block-body"><div class="nyc-block-name">Upper East Side</div><div class="nyc-block-desc">Brownstones, boutiques y el Museum Mile sobre la 5th Avenue.</div><ul class="nyc-tips-list"><li>Madison Avenue entre 70th y 80th: vidrierismo de lujo</li><li>Guggenheim en 5th y 89th: icónico solo desde afuera</li></ul><div class="nyc-block-footer"><span>⏱ ~1.5 hs</span><span>🚶 A pie / subte</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">18:00 – 19:30</span><span class="nyc-bdg nyc-bdg-night">🌃 Noche</span></div><div class="nyc-block-body"><div class="nyc-block-name">Times Square</div><div class="nyc-block-desc">De noche con las luces prendidas es una experiencia diferente. 15–20 min es suficiente.</div><ul class="nyc-tips-list"><li>Subir a los escalones rojos del TKTS booth para la foto panorámica</li><li>Comprar tickets de Broadway en el TKTS con descuento del día</li></ul><div class="nyc-block-footer"><span>⏱ 20–30 min</span><span>📍 42nd & Broadway</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">19:30 – 21:30</span><span class="nyc-bdg nyc-bdg-view">🔭 Atardecer</span></div><div class="nyc-block-body"><div class="nyc-block-name">Summit One Vanderbilt</div><div class="nyc-block-desc">El observatorio más espectacular de NYC. Piso 93 con espejos infinitos y el atardecer sobre Midtown. A 1 cuadra de Grand Central.</div><ul class="nyc-tips-list"><li>Reserva previa recomendada — se llena especialmente fines de semana</li><li>Llegar 15 min antes del atardecer para la luz ideal</li><li>Perfectamente ubicado antes de tomar el tren de vuelta a Stamford</li></ul><div class="nyc-block-footer"><span>⏱ ~2 hs</span><span>~$40 · reserva online</span></div></div></div>
+      </div>
+      <div class="nyc-food-section"><div class="nyc-food-title">🍽 Gastronomía del día</div><div class="nyc-food-chips"><div class="nyc-chip"><span class="nyc-chip-e">🥯</span><span class="nyc-chip-name">Ess-a-Bagel</span><span class="nyc-chip-desc">Desayuno</span><span class="nyc-chip-note">831 Third Ave, Midtown East</span></div><div class="nyc-chip"><span class="nyc-chip-e">🌭</span><span class="nyc-chip-name">Hot Dog / Hot Corn</span><span class="nyc-chip-desc">Snack en Central Park</span><span class="nyc-chip-note">Carritos en 59th St, entrada del parque</span></div><div class="nyc-chip"><span class="nyc-chip-e">🍔</span><span class="nyc-chip-name">7th Street Burger</span><span class="nyc-chip-desc">Cena</span><span class="nyc-chip-note">485 7th Ave — Times Square</span></div></div></div>
+      <div class="nyc-map-legend"><span class="nyc-leg-lbl">Mapa Día 1</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#2563eb"></span>Atracción</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#d97706"></span>Comida</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#7c3aed"></span>Especial</span></div>
+      <div class="nyc-map-box" id="nyc-map1"></div>
+    </div>
+
+    <hr class="nyc-divider">
+
+    <!-- DÍA 2 -->
+    <div class="nyc-day">
+      <div class="nyc-day-header">
+        <div class="nyc-day-num-block"><span class="nyc-day-num-lbl">Día</span><div class="nyc-day-num">02</div></div>
+        <div class="nyc-day-info">
+          <span class="nyc-day-weekday">Financial District · Oculus · Staten Island · Battery Park</span>
+          <div class="nyc-day-title">Downtown & El Ferry de Staten Island</div>
+          <div class="nyc-day-tagline">La estatua de la Libertad gratis, el mejor skyline desde el agua y el Wall Street histórico</div>
+        </div>
+      </div>
+      <div class="nyc-route">
+        <span class="nyc-route-lbl">Ruta</span>
+        <span class="nyc-stop">🚇 GCT → Fulton St</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">⛪ Oculus / WTC</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">💵 Wall Street</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">⛴ Staten Island Ferry</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">👵 Nonnas</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🌊 Battery Park</span>
+      </div>
+      <div class="nyc-note green"><span>★</span><span><em>Tip del día:</em> El Staten Island Ferry es la única forma <em>gratuita</em> de ver la Estatua de la Libertad y el skyline desde el agua. Sale cada 30 min. El ferry de ida y vuelta es la actividad más icónica y barata de NYC. Nonnas solo funciona jueves a domingo — verificar día de visita.</span></div>
+      <div class="nyc-grid">
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">08:30 – 10:30</span><span class="nyc-bdg nyc-bdg-icon">⛪ Ícono</span></div><div class="nyc-block-body"><div class="nyc-block-name">Oculus + WTC Memorial</div><div class="nyc-block-desc">La arquitectura más impactante del downtown. El Oculus (Westfield) es impresionante desde adentro. El Memorial tiene las dos piscinas donde estaban las torres.</div><ul class="nyc-tips-list"><li>Oculus: entrar temprano — se llena de turistas hacia el mediodía</li><li>WTC Memorial: entrada libre, silencioso y muy emotivo</li><li>One WTC Observatory opcional (~$35)</li></ul><div class="nyc-block-footer"><span>⏱ ~2 hs</span><span>🚇 Subte A/C/E o 2/3 a Fulton</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">10:30 – 12:00</span><span class="nyc-bdg nyc-bdg-walk">💵 Historia</span></div><div class="nyc-block-body"><div class="nyc-block-name">Wall Street + Financial District</div><div class="nyc-block-desc">El corazón financiero de NYC. La Bolsa de Valores (exterior), el Toro de Bronce y el cañón de rascacielos más compacto de la ciudad.</div><ul class="nyc-tips-list"><li>NYSE en Broad & Wall Street — el edificio y la bandera americana</li><li>Charging Bull en Bowling Green — foto icónica</li><li>Stone Street para desayuno tardío o café — calle adoquinada histórica</li></ul><div class="nyc-block-footer"><span>⏱ ~1.5 hs</span><span>🚶 A pie desde el Oculus</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">12:30 – 15:00</span><span class="nyc-bdg nyc-bdg-free">⛴ Gratis</span></div><div class="nyc-block-body"><div class="nyc-block-name">Staten Island Ferry (ida y vuelta)</div><div class="nyc-block-desc">La vista más icónica de NYC completamente gratis. Sale de Whitehall Terminal cada 30 minutos. El viaje de 25 min pasa frente a la Estatua de la Libertad.</div><ul class="nyc-tips-list"><li>Pararse en la proa del ferry para la mejor vista frontal</li><li>El regreso tiene la vista del skyline de Manhattan — igual de impresionante</li><li>No hace falta bajar en Staten Island si no se va a Nonnas</li></ul><div class="nyc-block-footer"><span>⏱ ~1 hs ida/vuelta · Gratis</span><span>📍 Whitehall Terminal</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">15:00 – 17:30</span><span class="nyc-bdg nyc-bdg-food">👵 Especial</span></div><div class="nyc-block-body"><div class="nyc-block-name">Enoteca Maria — Nonnas (opcional)</div><div class="nyc-block-desc">Si el día cae en jueves–domingo y tienen reserva, bajar del ferry en Staten Island (5 min). Abuelas de todo el mundo cocinan su cocina tradicional. La experiencia más única del viaje.</div><ul class="nyc-tips-list"><li>27 Hyatt St, Staten Island — 5 min del ferry terminal</li><li>Reserva obligatoria con semanas de anticipación</li><li>Cash only — llevar efectivo</li><li>Volver a Manhattan en el siguiente ferry</li></ul><div class="nyc-block-footer"><span>⏱ ~2 hs · Cash only</span><span>Solo jue–dom</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">17:30 – 19:00</span><span class="nyc-bdg nyc-bdg-walk">🌊 Cierre</span></div><div class="nyc-block-body"><div class="nyc-block-name">Battery Park + Paseo del Hudson</div><div class="nyc-block-desc">El parque al final de Manhattan con vistas al río y a la Estatua. Perfecto para cerrar el día caminando con las luces del atardecer.</div><ul class="nyc-tips-list"><li>Castle Clinton — fuerte histórico de 1811, gratis</li><li>Los jardines del parque tienen buenas vistas sin aglomeración</li><li>Regresar en subte o Uber al hotel</li></ul><div class="nyc-block-footer"><span>⏱ ~1.5 hs</span><span>🚶 A pie</span></div></div></div>
+      </div>
+      <div class="nyc-food-section"><div class="nyc-food-title">🍽 Gastronomía del día</div><div class="nyc-food-chips"><div class="nyc-chip"><span class="nyc-chip-e">🫔</span><span class="nyc-chip-name">Halal Guys</span><span class="nyc-chip-desc">Almuerzo rápido</span><span class="nyc-chip-note">Varios locales en Downtown</span></div><div class="nyc-chip"><span class="nyc-chip-e">👵</span><span class="nyc-chip-name">Enoteca Maria (Nonnas)</span><span class="nyc-chip-desc">Cena especial</span><span class="nyc-chip-note">27 Hyatt St, Staten Island · Reserva previa</span></div><div class="nyc-chip"><span class="nyc-chip-e">🍕</span><span class="nyc-chip-name">Joe's Pizza Downtown</span><span class="nyc-chip-desc">Snack</span><span class="nyc-chip-note">124 Fulton St</span></div></div></div>
+      <div class="nyc-map-legend"><span class="nyc-leg-lbl">Mapa Día 2</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#2563eb"></span>Atracción</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#d97706"></span>Comida</span><span class="nyc-leg-item"><span class="nyc-leg-square" style="background:rgba(37,99,235,0.12);border-color:#2563eb"></span>Financial District</span></div>
+      <div class="nyc-map-box" id="nyc-map2"></div>
+    </div>
+
+    <hr class="nyc-divider">
+
+    <!-- DÍA 3 -->
+    <div class="nyc-day">
+      <div class="nyc-day-header">
+        <div class="nyc-day-num-block"><span class="nyc-day-num-lbl">Día</span><div class="nyc-day-num">03</div></div>
+        <div class="nyc-day-info">
+          <span class="nyc-day-weekday">Brooklyn Bridge · DUMBO · Brooklyn Heights</span>
+          <div class="nyc-day-title">Brooklyn — El lado más fotogénico</div>
+          <div class="nyc-day-tagline">El puente, el skyline desde el agua y los barrios más lindos fuera de Manhattan</div>
+        </div>
+      </div>
+      <div class="nyc-route">
+        <span class="nyc-route-lbl">Ruta</span>
+        <span class="nyc-stop">🌉 Brooklyn Bridge</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">📸 Washington St, DUMBO</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🏖 Pebble Beach</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🏘 Heights Promenade</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🔭 Summit / 🎭 Broadway</span>
+      </div>
+      <div class="nyc-grid">
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">08:00 – 10:00</span><span class="nyc-bdg nyc-bdg-icon">🌉 Ícono</span></div><div class="nyc-block-body"><div class="nyc-block-name">Brooklyn Bridge a pie</div><div class="nyc-block-desc">Cruzar de Manhattan a Brooklyn lleva ~30–45 min caminando. Las vistas del skyline desde el medio son las más icónicas de NYC.</div><ul class="nyc-tips-list"><li>Entrada por el lado de Manhattan en City Hall Park</li><li>Mantenerse en el carril peatonal (no en el de bicicletas)</li><li>El punto medio: la foto del skyline con las torres de fondo</li><li>De mañana hay menos gente y la luz es lateral y suave</li></ul><div class="nyc-block-footer"><span>⏱ ~45 min · Libre</span><span>🚇 Subte 4/5/6 a Brooklyn Bridge</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">10:00 – 13:00</span><span class="nyc-bdg nyc-bdg-walk">📸 DUMBO</span></div><div class="nyc-block-body"><div class="nyc-block-name">DUMBO + Washington St + Pebble Beach</div><div class="nyc-block-desc">El barrio más fotogénico de Brooklyn. Washington Street con el puente al fondo es la foto más replicada de NYC.</div><ul class="nyc-tips-list"><li>Washington St entre Front y Water St — la foto del puente enmarcado</li><li>Pebble Beach: playa de piedras con el skyline de fondo, increíble</li><li>Jane's Carousel dentro del parque: fotogénico e histórico</li></ul><div class="nyc-block-footer"><span>⏱ ~3 hs</span><span>🚶 A pie desde el puente</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">13:00 – 15:30</span><span class="nyc-bdg nyc-bdg-walk">🏘 Barrio</span></div><div class="nyc-block-body"><div class="nyc-block-name">Brooklyn Heights Promenade</div><div class="nyc-block-desc">Paseo elevado sobre la FDR Drive con la vista más limpia del skyline. Mejor que cualquier mirador pagado.</div><ul class="nyc-tips-list"><li>La Promenade está entre Remsen St y Orange St</li><li>Brownstones de Brooklyn Heights — las más preservadas de NYC</li><li>Montague Street: cafés para el almuerzo</li></ul><div class="nyc-block-footer"><span>⏱ ~2.5 hs</span><span>🚶 ~20 min desde DUMBO</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">17:30 – 21:00</span><span class="nyc-bdg nyc-bdg-view">🌆 Cierre</span></div><div class="nyc-block-body"><div class="nyc-block-name">Summit One Vanderbilt — o Broadway</div><div class="nyc-block-desc">Volver a Manhattan en ferry NYC Ferry (más escénico) o subte. Si el clima es bueno → Summit. Si no → TKTS y show de Broadway.</div><ul class="nyc-tips-list"><li>NYC Ferry: DUMBO → Midtown, vistas del puente desde el agua</li><li>Summit: reserva previa, llegar 1h antes del sunset</li><li>Broadway TKTS: 47th & Broadway, descuentos hasta 50%</li></ul><div class="nyc-block-footer"><span>⏱ ~2.5 hs</span><span>Summit ~$40 · Broadway $80–180</span></div></div></div>
+      </div>
+      <div class="nyc-food-section"><div class="nyc-food-title">🍽 Gastronomía del día</div><div class="nyc-food-chips"><div class="nyc-chip"><span class="nyc-chip-e">🍕</span><span class="nyc-chip-name">Joe's Pizza</span><span class="nyc-chip-desc">Almuerzo</span><span class="nyc-chip-note">7 Carmine St (o local de Brooklyn)</span></div><div class="nyc-chip"><span class="nyc-chip-e">🌽</span><span class="nyc-chip-name">Hot Corn</span><span class="nyc-chip-desc">Snack callejero</span><span class="nyc-chip-note">Carritos en Manhattan</span></div></div></div>
+      <div class="nyc-map-legend"><span class="nyc-leg-lbl">Mapa Día 3</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#2563eb"></span>Atracción</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#d97706"></span>Comida</span><span class="nyc-leg-item"><span class="nyc-leg-square" style="background:rgba(22,163,74,0.15);border-color:#16a34a"></span>DUMBO</span><span class="nyc-leg-item"><span class="nyc-leg-square" style="background:rgba(37,99,235,0.12);border-color:#2563eb"></span>Brooklyn Heights</span></div>
+      <div class="nyc-map-box" id="nyc-map3"></div>
+    </div>
+
+    <hr class="nyc-divider">
+
+    <!-- DÍA 4 -->
+    <div class="nyc-day">
+      <div class="nyc-day-header">
+        <div class="nyc-day-num-block"><span class="nyc-day-num-lbl">Día</span><div class="nyc-day-num">04</div></div>
+        <div class="nyc-day-info">
+          <span class="nyc-day-weekday">Hudson Yards · High Line · Village · SoHo</span>
+          <div class="nyc-day-title">El lado humano de Manhattan</div>
+          <div class="nyc-day-tagline">Arte urbano, parques elevados y los barrios más caminables de la ciudad</div>
+        </div>
+      </div>
+      <div class="nyc-note green"><span>★</span><span><em>Por qué The Vessel primero:</em> A las 8–9am hay muy poca gente. La High Line sí o sí de norte a sur — empezando en Hudson Yards el recorrido fluye natural hasta el Meatpacking District.</span></div>
+      <div class="nyc-route">
+        <span class="nyc-route-lbl">Ruta</span>
+        <span class="nyc-stop">🚇 GCT → 34th / Hudson Yards</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🐝 The Vessel</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🌿 High Line</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🏪 Chelsea Market</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🌳 Washington Sq Park</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🏘 Greenwich Village</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🛍 SoHo</span><span class="nyc-arr">→</span>
+        <span class="nyc-stop">🇮🇹 Little Italy</span>
+      </div>
+      <div class="nyc-grid">
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">08:00 – 09:30</span><span class="nyc-bdg nyc-bdg-icon">🐝 Temprano</span></div><div class="nyc-block-body"><div class="nyc-block-name">The Vessel + Hudson Yards</div><div class="nyc-block-desc">Estructura de 154 escaleras interconectadas. Temprano no hay filas. Hudson Yards es el desarrollo urbano más moderno de NYC.</div><ul class="nyc-tips-list"><li>Reservar entrada online (gratis pero requiere reserva)</li><li>The Shed: galería de arte contemporáneo en el mismo complejo</li></ul><div class="nyc-block-footer"><span>⏱ ~1.5 hs</span><span>🚇 Subte 7 o C/E a 34th</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">09:30 – 12:00</span><span class="nyc-bdg nyc-bdg-walk">🌿 High Line</span></div><div class="nyc-block-body"><div class="nyc-block-name">High Line completa — Norte a Sur</div><div class="nyc-block-desc">Parque elevado sobre vías de tren en desuso. 2.3 km de arte urbano, plantas y vistas sobre Manhattan y el Hudson.</div><ul class="nyc-tips-list"><li>Entrar por 34th St y bajar paseando sin apuro</li><li>Los "viewing decks" sobre la 10th Ave son los mejores miradores</li><li>Termina en el Meatpacking District (14th St)</li></ul><div class="nyc-block-footer"><span>⏱ ~2.5 hs · Libre</span><span>🚶 Todo a pie</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">12:00 – 13:30</span><span class="nyc-bdg nyc-bdg-food">🏪 Almuerzo</span></div><div class="nyc-block-body"><div class="nyc-block-name">Chelsea Market</div><div class="nyc-block-desc">El mercado gourmet más famoso de NYC, dentro de la ex fábrica de Oreo. Docenas de puestos.</div><ul class="nyc-tips-list"><li>The Lobster Place: mariscos frescos, el mejor puesto</li><li>Los Tacos No. 1 también en Chelsea Market</li></ul><div class="nyc-block-footer"><span>⏱ ~1.5 hs</span><span>📍 75 9th Ave</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">13:30 – 16:00</span><span class="nyc-bdg nyc-bdg-walk">🌳 Village</span></div><div class="nyc-block-body"><div class="nyc-block-name">Greenwich Village + Washington Square Park</div><div class="nyc-block-desc">El barrio más humano de Manhattan. Washington Square Park es el corazón bohemio — músicos, ajedrez, estudiantes de NYU.</div><ul class="nyc-tips-list"><li>Bleecker Street: librerías, bares históricos</li><li>Washington Sq Park: el arco, la fuente y los artistas callejeros</li><li>Joe's Pizza en 7 Carmine St — parada obligatoria</li></ul><div class="nyc-block-footer"><span>⏱ ~2.5 hs</span><span>🚶 A pie desde Chelsea Market</span></div></div></div>
+        <div class="nyc-block"><div class="nyc-block-top"><span class="nyc-block-time">16:00 – 18:30</span><span class="nyc-bdg nyc-bdg-walk">🛍 SoHo</span></div><div class="nyc-block-body"><div class="nyc-block-name">SoHo + Little Italy + Chinatown</div><div class="nyc-block-desc">Mayor concentración de edificios de hierro fundido de EE.UU. y las tiendas más interesantes de la ciudad.</div><ul class="nyc-tips-list"><li>Prince Street y Spring Street: el corazón de SoHo</li><li>Mulberry Street entre Canal y Broome: Little Italy clásica</li></ul><div class="nyc-block-footer"><span>⏱ ~2.5 hs</span><span>🚶 A pie desde Washington Sq</span></div></div></div>
+      </div>
+      <div class="nyc-food-section"><div class="nyc-food-title">🍽 Gastronomía del día</div><div class="nyc-food-chips"><div class="nyc-chip"><span class="nyc-chip-e">🌮</span><span class="nyc-chip-name">Los Tacos No.1</span><span class="nyc-chip-desc">Chelsea Market</span><span class="nyc-chip-note">75 9th Ave</span></div><div class="nyc-chip"><span class="nyc-chip-e">🍕</span><span class="nyc-chip-name">Joe's Pizza</span><span class="nyc-chip-desc">Slice clásico</span><span class="nyc-chip-note">7 Carmine St — Greenwich Village</span></div><div class="nyc-chip"><span class="nyc-chip-e">🍔</span><span class="nyc-chip-name">7th Street Burger</span><span class="nyc-chip-desc">Smash burger</span><span class="nyc-chip-note">91 E 7th St — East Village</span></div></div></div>
+      <div class="nyc-map-legend"><span class="nyc-leg-lbl">Mapa Día 4</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#2563eb"></span>Atracción</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#d97706"></span>Comida</span><span class="nyc-leg-item"><span class="nyc-leg-square" style="background:rgba(22,163,74,0.15);border-color:#16a34a"></span>High Line</span><span class="nyc-leg-item"><span class="nyc-leg-square" style="background:rgba(124,58,237,0.12);border-color:#7c3aed"></span>SoHo / Village</span></div>
+      <div class="nyc-map-box" id="nyc-map4"></div>
+    </div>
+
+  </div><!-- /nyc-container -->
+
+  <!-- GUÍA GASTRONÓMICA -->
+  <div class="nyc-food-guide">
+    <div class="nyc-container">
+      <div class="nyc-food-guide-title">Guía gastronómica</div>
+      <div class="nyc-food-guide-sub">Los imperdibles para comer a lo largo de los 4 días</div>
+      <div class="nyc-food-grid">
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">🥯</span><div><div class="nyc-food-card-name">Ess-a-Bagel</div><div class="nyc-food-card-type">DESAYUNO · BAGEL NYC</div></div></div><div class="nyc-food-card-desc">El bagel más icónico de NYC desde 1976. Enorme, crujiente por fuera, suave por dentro. 18 tipos de cream cheese.</div><div class="nyc-food-card-loc">📍 831 Third Ave (Midtown East)</div><div class="nyc-food-card-tip">everything bagel + scallion cream cheese + nova salmon</div></div>
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">🧁</span><div><div class="nyc-food-card-name">Magnolia Bakery</div><div class="nyc-food-card-type">POSTRE · BANANA PUDDING</div></div></div><div class="nyc-food-card-desc">El banana pudding cremoso de Grand Central es perfecto para llevar en el tren de vuelta a Stamford.</div><div class="nyc-food-card-loc">📍 Grand Central Terminal (lower level)</div><div class="nyc-food-card-tip">Banana pudding para el tren — experiencia completa</div></div>
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">🍕</span><div><div class="nyc-food-card-name">Joe's Pizza</div><div class="nyc-food-card-type">PIZZA · SLICE CLÁSICO</div></div></div><div class="nyc-food-card-desc">La pizza por porción más clásica de NYC desde 1975. Sin adornos. Plain cheese slice = definición del slice neoyorquino.</div><div class="nyc-food-card-loc">📍 7 Carmine St (Greenwich Village, original)</div><div class="nyc-food-card-tip">Comer parado en la vereda, como debe ser</div></div>
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">🍔</span><div><div class="nyc-food-card-name">7th Street Burger</div><div class="nyc-food-card-type">SMASH BURGER</div></div></div><div class="nyc-food-card-desc">El "In-N-Out del Este". Smash burgers aplastados en plancha, queso americano, salsa especial.</div><div class="nyc-food-card-loc">📍 91 E 7th St (East Village) · 485 7th Ave (Times Square)</div><div class="nyc-food-card-tip">Doble con jalapeños + ghost pepper sauce</div></div>
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">🫔</span><div><div class="nyc-food-card-name">The Halal Guys</div><div class="nyc-food-card-type">HALAL CART · ICÓNICO</div></div></div><div class="nyc-food-card-desc">Comenzaron como un carrito en 53rd & 6th Ave en 1990 y se convirtieron en leyenda. Pollo sobre arroz con salsa blanca y roja.</div><div class="nyc-food-card-loc">📍 53rd St & 6th Ave (el original, de noche)</div><div class="nyc-food-card-tip">Chicken over rice · salsa blanca + roja al costado</div></div>
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">👵</span><div><div class="nyc-food-card-name">Enoteca Maria (Nonnas)</div><div class="nyc-food-card-type">ITALIANA GLOBAL · ESPECIAL</div></div></div><div class="nyc-food-card-desc">Abuelas de todo el mundo cocinan su cocina tradicional. La experiencia más única de este viaje.</div><div class="nyc-food-card-loc">📍 27 Hyatt St, Staten Island (5 min del ferry)</div><div class="nyc-food-card-tip">Reserva obligatoria semanas antes · Cash only · Jue a Dom</div></div>
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">🌭</span><div><div class="nyc-food-card-name">Hot Dog callejero</div><div class="nyc-food-card-type">SNACK · STREET FOOD</div></div></div><div class="nyc-food-card-desc">El hot dog de carrito es una institución. El mejor después de una larga caminata.</div><div class="nyc-food-card-loc">📍 En cualquier esquina de Midtown y Central Park</div><div class="nyc-food-card-tip">Con mostaza amarilla y chucrut. Sin ketchup — así se hace en NYC</div></div>
+        <div class="nyc-food-card"><div class="nyc-food-card-top"><span class="nyc-food-card-e">🌴</span><div><div class="nyc-food-card-name">Tiki Chick</div><div class="nyc-food-card-type">TIKI BAR · NOCHE</div></div></div><div class="nyc-food-card-desc">Bar tropical en el Upper West Side con sándwiches de pollo frito ($5) y cocteles frozen. Ambiente vibrante.</div><div class="nyc-food-card-loc">📍 517 Amsterdam Ave (UWS, 85th St)</div><div class="nyc-food-card-tip">Ir de noche · sándwich de $5 mejor relación precio/calidad</div></div>
+      </div>
+      <div class="nyc-food-map-wrap">
+        <div class="nyc-food-map-title">Mapa de todos los locales</div>
+        <div class="nyc-food-map-sub">CLICK EN CADA MARCADOR · MÚLTIPLES SUCURSALES</div>
+        <div class="nyc-food-map-leg"><span class="nyc-leg-lbl">Referencias</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#d97706"></span>Restaurante / food</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#e8312a"></span>Bar / bebidas</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#7c3aed"></span>Mercado / food hall</span><span class="nyc-leg-item"><span class="nyc-leg-dot" style="background:#16a34a"></span>Staten Island</span></div>
+        <div class="nyc-food-map-box" id="nyc-mapFood"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIPS -->
+  <div class="nyc-tips-section">
+    <div class="nyc-container">
+      <div class="nyc-tips-title">Tips del viajero</div>
+      <div class="nyc-tips-grid">
+        <div class="nyc-tip-card"><div class="nyc-tip-icon">🚄</div><h4>Stamford → NYC</h4><p>Metro-North New Haven Line. ~55 min a Grand Central. Salir temprano (7–8am). Comprar ticket en la app MTA o máquinas de GCT.</p></div>
+        <div class="nyc-tip-card"><div class="nyc-tip-icon">🚇</div><h4>Subte NYC</h4><p>Comprar OMNY card o usar tarjeta contactless directo. Sin límite de trasbordos en 2hs. La app Citymapper es mejor que Google Maps.</p></div>
+        <div class="nyc-tip-card"><div class="nyc-tip-icon">💳</div><h4>Dinero</h4><p>NYC es principalmente cashless. Excepción: Enoteca Maria (cash only) y algunos carritos. Propina: 18–20% siempre.</p></div>
+        <div class="nyc-tip-card"><div class="nyc-tip-icon">👟</div><h4>Calzado</h4><p>Zapatillas cómodas siempre. Cada día implica 15,000–25,000 pasos. High Line y Brooklyn son especialmente extensos.</p></div>
+        <div class="nyc-tip-card"><div class="nyc-tip-icon">📅</div><h4>Reservas previas</h4><p>Summit One Vanderbilt, Enoteca Maria (Nonnas) y Broadway requieren reserva anticipada. Se agotan en fin de semana.</p></div>
+        <div class="nyc-tip-card"><div class="nyc-tip-icon">🌤</div><h4>Clima & Summit</h4><p>Verificar pronóstico la noche anterior: Summit y Brooklyn Bridge son mucho mejores con cielo despejado. Broadway es el plan B perfecto.</p></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /newyork -->
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ── MAP DATA ──────────────────────────────────────────────────────────────────
+
+const chiDay1 = {
+    points: [
+        { n:1, name:'Riverwalk',              desc:'Inicio del recorrido junto al río',       lat:41.8879, lng:-87.6316, type:'attraction' },
+        { n:2, name:'Puentes / Wacker Drive', desc:'Mejores vistas del skyline desde los puentes', lat:41.8874, lng:-87.6248, type:'attraction' },
+        { n:3, name:'Millennium Park — The Bean', desc:'Cloud Gate y Fuente Crown',           lat:41.8827, lng:-87.6233, type:'attraction' },
+        { n:4, name:'Lago Michigan',          desc:'Cierre del día',                          lat:41.8814, lng:-87.6165, type:'attraction' },
+        { name:"Portillo's",                  desc:'Cena opción 1 — clásico de Chicago',      lat:41.8923, lng:-87.6366, type:'dining' },
+        { name:"Lou Malnati's",               desc:'Cena opción 2 — deep dish pizza',         lat:41.8893, lng:-87.6262, type:'dining' },
+        { n:'🎆', name:'Navy Pier — Fuegos Artificiales', desc:'Sábados en temporada (mayo–oct) a las 10pm. Gratis desde el exterior. Llegar 20 min antes.', lat:41.8917, lng:-87.6086, type:'attraction' },
+    ],
+    route: [
+        [41.8879,-87.6316],[41.8874,-87.6248],
+        [41.8827,-87.6233],[41.8814,-87.6165],[41.8917,-87.6086],
+    ]
+};
+
+const chiDay2 = {
+    points: [
+        { n:1, name:'Lincoln Park Zoo',             desc:'Entrada gratis — inicio del día',         lat:41.9218, lng:-87.6366, type:'attraction' },
+        { n:2, name:'Vista skyline desde el norte', desc:'Clave del día — mejor ángulo del skyline', lat:41.9249, lng:-87.6287, type:'attraction' },
+        { name:'Mr. Beef',                          desc:'Almuerzo — Italian Beef Sandwich',         lat:41.8936, lng:-87.6363, type:'dining' },
+        { n:3, name:'Wendella — Tour Arquitectura', desc:'Llegar 30 min antes. Horario sunset.',     lat:41.8882, lng:-87.6283, type:'attraction' },
+        { n:4, name:'360 Chicago — Mirador',        desc:'Después del Wendella tour. Subir 30–45 min antes del sunset. Mejor vista del lago + skyline.', lat:41.8996, lng:-87.6231, type:'attraction' },
+        { n:5, name:'River North',                  desc:'Rooftops y bares nocturnos',              lat:41.8940, lng:-87.6340, type:'attraction' },
+    ],
+    route: [
+        [41.9218,-87.6366],[41.9249,-87.6287],
+        [41.8936,-87.6363],[41.8882,-87.6283],
+        [41.8996,-87.6231],[41.8940,-87.6340],
+    ]
+};
+
+const chiDay3 = {
+    points: [
+        { n:1, name:'University of Chicago', desc:'Arquitectura tipo europea — Hyde Park',     lat:41.7886, lng:-87.5997, type:'attraction' },
+        { n:2, name:'Jackson Park',          desc:'Parque histórico — si hay tiempo',          lat:41.7784, lng:-87.5785, type:'attraction' },
+        { n:3, name:'Pilsen — Murales',      desc:'Barrio artístico, murales por todo el barrio', lat:41.8559, lng:-87.6673, type:'attraction' },
+        { n:4, name:'360 Chicago',           desc:'Subir 30–45 min antes del sunset',          lat:41.8999, lng:-87.6237, type:'attraction' },
+        { name:'Quartino',                   desc:'Cena — italiano, compartir platos',          lat:41.8929, lng:-87.6283, type:'dining' },
+    ],
+    route: [
+        [41.7886,-87.5997],[41.7784,-87.5785],
+        [41.8559,-87.6673],[41.8999,-87.6237],
+        [41.8929,-87.6283],
+    ]
+};
+
+const seaDay2 = {
+    points: [
+        { n:1, name:'Westlake Station',        desc:'Llegada en Link Light Rail',               lat:47.6136, lng:-122.3369, type:'transport'  },
+        { n:2, name:'Pike Place Market',       desc:'Mercado histórico de Seattle',             lat:47.6085, lng:-122.3407, type:'attraction' },
+        { n:3, name:'Original Starbucks',      desc:'Dentro de Pike Place Market',              lat:47.6085, lng:-122.3418, type:'attraction' },
+        { n:4, name:'Seattle Waterfront',      desc:'Paseo por el frente costero',              lat:47.6065, lng:-122.3415, type:'attraction' },
+        { n:5, name:'Seattle Great Wheel',     desc:'Rueda icónica sobre el muelle',            lat:47.6063, lng:-122.3412, type:'attraction' },
+        { n:6, name:'Space Needle',            desc:'Mirador icónico de Seattle',               lat:47.6204, lng:-122.3493, type:'attraction' },
+        { n:7, name:'Chihuly Garden and Glass',desc:'Arte en vidrio — si hay que elegir uno',   lat:47.6211, lng:-122.3509, type:'attraction' },
+        { n:8, name:'Kerry Park',              desc:'Mejor vista de Seattle al atardecer',      lat:47.6294, lng:-122.3598, type:'attraction' },
+    ],
+    route: [
+        [47.6136,-122.3369],[47.6085,-122.3407],
+        [47.6063,-122.3412],[47.6205,-122.3493],
+        [47.6294,-122.3598],
+    ]
+};
+
+// ── MARKER FACTORY (Chicago/Seattle) ──────────────────────────────────────────
+
+const COLORS = {
+    attraction: { bg:'#1a2744', fg:'#ffffff' },
+    dining:     { bg:'#d97706', fg:'#ffffff' },
+    transport:  { bg:'#c9a84c', fg:'#1a2744' },
+};
+
+function makeIcon(point) {
+    const c = COLORS[point.type] || COLORS.attraction;
+    const label = point.n !== undefined ? point.n : '●';
+    return L.divIcon({
+        className: '',
+        html: `<div style="width:30px;height:30px;border-radius:50%;
+            background:${c.bg};color:${c.fg};
+            display:flex;align-items:center;justify-content:center;
+            font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;
+            border:2.5px solid #fff;
+            box-shadow:0 2px 8px rgba(0,0,0,.28);">${label}</div>`,
+        iconSize: [30,30], iconAnchor:[15,15], popupAnchor:[0,-18]
+    });
+}
+
+function makePopup(p) {
+    const labels = { attraction:'Atracción', dining:'Gastronomía', transport:'Transporte' };
+    return `<div>
+        <span class="pop-badge pop-${p.type}">${labels[p.type]||'Atracción'}</span><br>
+        <strong>${p.name}</strong>
+        ${p.desc ? `<br><span style="color:#6b7280;font-size:12px;">${p.desc}</span>` : ''}
+    </div>`;
+}
+
+// ── MAP INIT (Chicago/Seattle) ────────────────────────────────────────────────
+
+const done = {};
+
+function initMap(id, data) {
+    if (done[id]) return;
+    done[id] = true;
+
+    const map = registerMap(L.map(id, { scrollWheelZoom: false }));
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    const bounds = [];
+    data.points.forEach(p => {
+        L.marker([p.lat, p.lng], { icon: makeIcon(p) })
+            .addTo(map)
+            .bindPopup(makePopup(p), { maxWidth:230 });
+        bounds.push([p.lat, p.lng]);
+    });
+
+    if (data.route && data.route.length > 1) {
+        L.polyline(data.route, {
+            color: '#c9a84c', weight: 3.5,
+            opacity: 0.75, dashArray: '9,5'
+        }).addTo(map);
+    }
+
+    map.fitBounds(bounds, { padding:[36,36] });
+}
+
+// ── LA MAPS ───────────────────────────────────────────────────────────────────
+
+function makeLaIcon(num, color) {
+    return L.divIcon({
+        className: '',
+        html: `<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;
+            background:${color};transform:rotate(-45deg);
+            border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);
+            display:flex;align-items:center;justify-content:center;">
+            <span style="transform:rotate(45deg);color:#fff;font-size:11px;font-weight:700;">${num}</span></div>`,
+        iconSize:[30,30], iconAnchor:[15,30], popupAnchor:[0,-32]
+    });
+}
+
+function initLaMap(containerId, center, zoom, stops) {
+    if (done[containerId]) return;
+    done[containerId] = true;
+    const map = registerMap(L.map(containerId, { scrollWheelZoom: false }));
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution:'© OpenStreetMap © CARTO', maxZoom:19
+    }).addTo(map);
+    map.setView(center, zoom);
+    const latlngs = stops.map(s => [s.lat, s.lng]);
+    L.polyline(latlngs, { color:'#C4603A', weight:2.5, opacity:0.55, dashArray:'6,8' }).addTo(map);
+    stops.forEach((s, i) => {
+        L.marker([s.lat, s.lng], { icon: makeLaIcon(i+1, s.color || '#C4603A') })
+            .addTo(map)
+            .bindPopup(`<strong style="font-size:13px;">${s.name}</strong><br><span style="font-size:11px;color:#8A7968;">${s.time}</span>`, { maxWidth:220 });
+    });
+}
+
+// ── ROADTRIP MAP ──────────────────────────────────────────────────────────────
+
+let rtMapInstance = null;
+
+function initRoadtripMap() {
+    if (done['rt-main-map']) return;
+    done['rt-main-map'] = true;
+
+    const map = registerMap(L.map('rt-main-map', { scrollWheelZoom: false }));
+    rtMapInstance = map;
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution:'© OpenStreetMap © CARTO', maxZoom:19
+    }).addTo(map);
+
+    const rtStops = [
+        { latlng:[38.5449,-121.7405], emoji:'🏠', color:'#8DA882', title:'Davis', sub:'Punto de partida · ~9:30 AM' },
+        { latlng:[38.6954,-121.5908], emoji:'✈️', color:'#7AACBF', title:'Sacramento Airport (SMF)', sub:'Recogida del auto · 11:00 AM' },
+        { latlng:[35.6269,-120.6911], emoji:'🍷', color:'#9A3C7A', title:'Paso Robles', sub:'~4:30 PM · 60-75 min' },
+        { latlng:[35.1428,-120.6413], emoji:'🌊', color:'#5B8FA8', title:'Pismo Beach (variante)', sub:'Opcional · ~30-45 min', variant:true },
+        { latlng:[34.5958,-120.1346], emoji:'⚓', color:'#5B9FB8', title:'Solvang', sub:'~6:00 PM · 45-60 min' },
+        { latlng:[34.4208,-119.6982], emoji:'🌴', color:'#C85A2A', title:'Santa Bárbara', sub:'~7:00 PM · Cena' },
+        { latlng:[34.0007,-118.4512], emoji:'★', color:'#E8A020', title:'Marina del Rey — LA', sub:'~9:00 PM · Destino final', big:true },
+    ];
+
+    function makeRtIcon(emoji, color, size, isVariant) {
+        const border = isVariant ? 'rgba(91,159,184,0.8)' : 'rgba(255,255,255,0.75)';
+        const opacity = isVariant ? '0.7' : '1';
+        return L.divIcon({
+            className:'',
+            html:`<div style="width:${size}px;height:${size}px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid ${border};box-shadow:0 3px 10px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:${opacity};"><span style="transform:rotate(45deg);font-size:${size*0.38}px;line-height:1;">${emoji}</span></div>`,
+            iconSize:[size,size], iconAnchor:[size/2,size], popupAnchor:[0,-size-4]
+        });
+    }
+
+    rtStops.forEach(s => {
+        const sz = s.big ? 42 : 34;
+        L.marker(s.latlng, { icon: makeRtIcon(s.emoji, s.color, sz, s.variant) })
+            .addTo(map)
+            .bindPopup(`<div style="font-family:sans-serif;min-width:160px;"><strong style="font-size:13px;color:#1E1B18;">${s.title}</strong><br><span style="font-size:11px;color:#8C8078;">${s.sub}</span></div>`, { maxWidth:240 });
+    });
+
+    // Tolls
+    [{latlng:[34.052,-118.430],label:'⚡ I-405 Express Lanes (opcional)',detail:'Carriles rápidos opcionales al llegar a LA. $3-8 si los usás. Los carriles normales son gratis.',free:false}].forEach(t => {
+        const ic = L.divIcon({ className:'', html:`<div style="width:26px;height:26px;border-radius:4px;background:#4A3000;border:2px solid #E8A020;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#E8A020;box-shadow:0 2px 6px rgba(0,0,0,0.5);">$</div>`, iconSize:[26,26], iconAnchor:[13,13], popupAnchor:[0,-16] });
+        L.marker(t.latlng, { icon:ic }).addTo(map).bindPopup(`<div style="font-family:sans-serif;min-width:180px;"><strong style="font-size:12px;">${t.label}</strong><br><span style="font-size:11px;color:#6A6060;">${t.detail}</span></div>`, { maxWidth:240 });
+    });
+
+    const mainWaypoints = [
+        [38.5449,-121.7405],[38.6954,-121.5908],[36.9741,-120.1000],
+        [35.6269,-120.6911],[34.5958,-120.1346],[34.4208,-119.6982],
+        [34.2200,-119.1800],[34.0007,-118.4512]
+    ];
+    const pismoVariant = [[35.6269,-120.6911],[35.1428,-120.6413],[34.5958,-120.1346]];
+
+    async function fetchRoute(wpts) {
+        const coords = wpts.map(w=>`${w[1]},${w[0]}`).join(';');
+        try {
+            const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+            const d = await r.json();
+            if (d.routes&&d.routes[0]) return d.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+        } catch(e) { console.warn('OSRM',e); }
+        return null;
+    }
+
+    async function drawRt() {
+        const mc = await fetchRoute(mainWaypoints);
+        if (mc) {
+            L.polyline(mc,{color:'#000',weight:6,opacity:0.35}).addTo(map);
+            L.polyline(mc,{color:'#E8A020',weight:3,opacity:0.85}).addTo(map);
+        } else {
+            L.polyline(mainWaypoints,{color:'#E8A020',weight:3,opacity:0.65,dashArray:'8,12'}).addTo(map);
+        }
+        const pc = await fetchRoute(pismoVariant);
+        if (pc) L.polyline(pc,{color:'#5B8FA8',weight:2,opacity:0.55,dashArray:'5,9'}).addTo(map);
+        map.fitBounds(L.latLngBounds(rtStops.map(s=>s.latlng)), {padding:[40,40]});
+    }
+    drawRt();
+}
+
+// ── NYC MAPS ──────────────────────────────────────────────────────────────────
+
+function initNycMaps() {
+    if (done['nyc-map1']) return;
+    done['nyc-map1'] = true;
+
+    function nycTiles(map) {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
+        }).addTo(map);
+    }
+
+    function nycAttr(num) {
+        return L.divIcon({ className:'',
+            html:`<div style="background:#2563eb;color:#fff;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:11px;font-weight:800;font-family:sans-serif">${num}</span></div>`,
+            iconSize:[28,28],iconAnchor:[14,28],popupAnchor:[0,-30]
+        });
+    }
+    function nycFood(e) {
+        return L.divIcon({ className:'',
+            html:`<div style="background:#d97706;color:#fff;width:30px;height:30px;border-radius:6px;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:14px;">${e}</div>`,
+            iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-18]
+        });
+    }
+    function nycSpecial(e, c) {
+        c = c || '#7c3aed';
+        return L.divIcon({ className:'',
+            html:`<div style="background:${c};color:#fff;width:30px;height:30px;border-radius:50%;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:14px;">${e}</div>`,
+            iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-18]
+        });
+    }
+    function nycRoute(map, pts, color) {
+        L.polyline(pts,{color,weight:3,opacity:0.65,dashArray:'7,5'}).addTo(map);
+    }
+    function nycZone(map, sw, ne, lbl, fill) {
+        L.rectangle([sw,ne],{color:fill,weight:1.5,opacity:0.45,fillColor:fill,fillOpacity:0.07,dashArray:'4,4'})
+         .addTo(map).bindTooltip(lbl,{permanent:true,direction:'center',className:'zone-lbl'});
+    }
+    function pop(t,d) {
+        return `<div style="font-family:sans-serif;min-width:160px;max-width:220px"><b style="font-size:12px;color:#111;line-height:1.3">${t}</b><br><span style="font-size:10.5px;color:#555;">${d}</span></div>`;
+    }
+
+    // MAP 1 — Midtown
+    (function(){
+        const map = registerMap(L.map('nyc-map1',{scrollWheelZoom:false})); nycTiles(map);
+        nycZone(map,[40.764,-73.981],[40.800,-73.949],'🌿 Central Park','#16a34a');
+        nycZone(map,[40.759,-73.992],[40.773,-73.972],'✨ Midtown Core','#2563eb');
+        const attr = [
+            {ll:[40.7527,-73.9772],n:'1',t:'🚄 Grand Central Terminal',d:'Base de operaciones. Magnífico interior beaux-arts.'},
+            {ll:[40.7484,-73.9856],n:'2',t:'🗽 Empire State Building',d:'Solo exterior de mañana. La foto clásica desde la 5th Ave.'},
+            {ll:[40.7411,-73.9897],n:'3',t:'🥨 Flatiron Building',d:'Intersección de Broadway y 5th Ave.'},
+            {ll:[40.7587,-73.9787],n:'4',t:'🎡 Rockefeller Center',d:'La plaza abajo es gratis.'},
+            {ll:[40.7794,-73.9632],n:'5',t:'🏛 Guggenheim',d:'Solo exterior.'},
+        ];
+        const foods = [
+            {ll:[40.7564,-73.9737],e:'🥯',t:'Ess-a-Bagel',d:'831 Third Ave. Desayuno ideal.'},
+            {ll:[40.7527,-73.9760],e:'🧁',t:'Magnolia Bakery',d:'Grand Central Terminal lower level.'},
+            {ll:[40.7580,-73.9855],e:'🍔',t:'7th Street Burger',d:'485 7th Ave — Times Square.'},
+        ];
+        const special = [
+            {ll:[40.7527,-73.9772],e:'🔭',c:'#7c3aed',t:'Summit One Vanderbilt',d:'Piso 93. A 1 cuadra de GCT.'},
+            {ll:[40.7579,-73.9855],e:'🎭',c:'#e8312a',t:'Times Square / TKTS',d:'Broadway con descuento del día.'},
+        ];
+        nycRoute(map, attr.slice(0,5).map(a=>a.ll), '#2563eb');
+        attr.forEach(a=>L.marker(a.ll,{icon:nycAttr(a.n)}).addTo(map).bindPopup(pop(a.t,a.d)));
+        foods.forEach(f=>L.marker(f.ll,{icon:nycFood(f.e)}).addTo(map).bindPopup(pop(f.t,f.d)));
+        special.forEach(s=>L.marker(s.ll,{icon:nycSpecial(s.e,s.c)}).addTo(map).bindPopup(pop(s.t,s.d)));
+        map.fitBounds([[40.738,-74.002],[40.803,-73.945]],{padding:[24,24]});
+    })();
+
+    // MAP 2 — Downtown / Staten Island
+    (function(){
+        const map = registerMap(L.map('nyc-map2',{scrollWheelZoom:false})); nycTiles(map);
+        nycZone(map,[40.703,-74.018],[40.715,-74.005],'💵 Financial District','#2563eb');
+        const attr = [
+            {ll:[40.7115,-74.0116],n:'1',t:'⛪ Oculus / WTC Memorial',d:'Temprano para evitar multitudes.'},
+            {ll:[40.7069,-74.0089],n:'2',t:'💵 Wall Street / NYSE',d:'Bolsa de Valores y el Toro de Bronce.'},
+            {ll:[40.7012,-74.0170],n:'3',t:'⛴ Whitehall Ferry Terminal',d:'Ferry a Staten Island — gratis — cada 30 min.'},
+            {ll:[40.6426,-74.0753],n:'4',t:'👵 Enoteca Maria (Nonnas)',d:'27 Hyatt St, Staten Island. Solo jue–dom.'},
+            {ll:[40.7037,-74.0168],n:'5',t:'🌊 Battery Park',d:'Cierre del día con vistas al río.'},
+        ];
+        nycRoute(map, attr.map(a=>a.ll), '#2563eb');
+        attr.forEach(a=>L.marker(a.ll,{icon:nycAttr(a.n)}).addTo(map).bindPopup(pop(a.t,a.d)));
+        L.marker([40.7061,-74.0117],{icon:nycFood('🍕')}).addTo(map).bindPopup(pop("Joe's Pizza Downtown","124 Fulton St."));
+        map.fitBounds([[40.635,-74.025],[40.720,-73.990]],{padding:[24,24]});
+    })();
+
+    // MAP 3 — Brooklyn
+    (function(){
+        const map = registerMap(L.map('nyc-map3',{scrollWheelZoom:false})); nycTiles(map);
+        nycZone(map,[40.699,-73.991],[40.705,-73.983],'📸 DUMBO','#16a34a');
+        nycZone(map,[40.693,-73.998],[40.701,-73.990],'🏘 Brooklyn Heights\nPromenade','#2563eb');
+        const attr = [
+            {ll:[40.7061,-73.9969],n:'1',t:'🌉 Brooklyn Bridge',d:'Entrada en City Hall Park. 30–45 min cruzando.'},
+            {ll:[40.7033,-73.9874],n:'2',t:'📸 Washington St, DUMBO',d:'La foto del puente enmarcado. Entre Front y Water St.'},
+            {ll:[40.7023,-73.9879],n:'3',t:'🏖 Pebble Beach',d:'Playa de piedras con skyline de fondo.'},
+            {ll:[40.7003,-73.9955],n:'4',t:'🏘 Brooklyn Heights Promenade',d:'Vista más limpia del skyline. Entre Remsen y Orange St.'},
+        ];
+        const special = [
+            {ll:[40.7527,-73.9772],e:'🔭',c:'#7c3aed',t:'Summit One Vanderbilt (Plan A)',d:'Si el día está despejado — cruzar y subir al piso 93.'},
+            {ll:[40.7579,-73.9855],e:'🎭',c:'#e8312a',t:'Broadway TKTS (Plan B)',d:'Si hay nubes — comprar ticket ese mismo día.'},
+        ];
+        nycRoute(map, attr.map(a=>a.ll), '#2563eb');
+        attr.forEach(a=>L.marker(a.ll,{icon:nycAttr(a.n)}).addTo(map).bindPopup(pop(a.t,a.d)));
+        special.forEach(s=>L.marker(s.ll,{icon:nycSpecial(s.e,s.c)}).addTo(map).bindPopup(pop(s.t,s.d)));
+        map.fitBounds([[40.692,-74.002],[40.758,-73.967]],{padding:[24,24]});
+    })();
+
+    // MAP 4 — High Line + Village + SoHo
+    (function(){
+        const map = registerMap(L.map('nyc-map4',{scrollWheelZoom:false})); nycTiles(map);
+        nycZone(map,[40.750,-74.005],[40.754,-73.997],'🐝 Hudson Yards','#2563eb');
+        nycZone(map,[40.740,-74.008],[40.752,-74.003],'🌿 High Line','#16a34a');
+        nycZone(map,[40.727,-74.005],[40.740,-73.998],'🌳 Greenwich Village','#7c3aed');
+        nycZone(map,[40.720,-74.003],[40.728,-73.995],'🛍 SoHo','#d97706');
+        const attr = [
+            {ll:[40.7538,-74.0027],n:'1',t:'🐝 The Vessel',d:'Hudson Yards. Reservar online gratis.'},
+            {ll:[40.7479,-74.0047],n:'2',t:'🌿 High Line (Inicio)',d:'2.3 km de arte urbano y vistas.'},
+            {ll:[40.7420,-74.0079],n:'3',t:'🏪 Chelsea Market',d:'75 9th Ave. Ex fábrica de Oreo.'},
+            {ll:[40.7308,-73.9979],n:'4',t:'🌳 Washington Square Park',d:'El corazón bohemio de NYC.'},
+            {ll:[40.7254,-73.9981],n:'5',t:'🛍 SoHo — Prince St',d:'Edificios de hierro fundido y mejores tiendas.'},
+            {ll:[40.7191,-73.9973],n:'6',t:'🇮🇹 Little Italy',d:'Mulberry St entre Canal y Broome.'},
+        ];
+        nycRoute(map, attr.map(a=>a.ll), '#16a34a');
+        attr.forEach(a=>L.marker(a.ll,{icon:nycAttr(a.n)}).addTo(map).bindPopup(pop(a.t,a.d)));
+        [{ll:[40.7306,-74.0024],e:'🍕',t:"Joe's Pizza",d:'7 Carmine St.'},
+         {ll:[40.7420,-74.0079],e:'🌮',t:'Los Tacos No.1',d:'Chelsea Market.'}]
+        .forEach(f=>L.marker(f.ll,{icon:nycFood(f.e)}).addTo(map).bindPopup(pop(f.t,f.d)));
+        map.fitBounds([[40.716,-74.012],[40.760,-73.990]],{padding:[24,24]});
+    })();
+
+    // MAP FOOD — Guía gastronómica completa
+    (function(){
+        const map = registerMap(L.map('nyc-mapFood',{scrollWheelZoom:false})); nycTiles(map);
+        function icoFoodLbl(e,c){ c=c||'#d97706'; return L.divIcon({className:'',html:`<div style="background:${c};color:#fff;width:32px;height:32px;border-radius:7px;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;font-size:15px;">${e}</div>`,iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-20]}); }
+        const spots = [
+            {ll:[40.7557,-73.9705],e:'🥯',c:'#d97706',t:'Ess-a-Bagel — Midtown East',d:'831 Third Ave. El clásico.',tip:'everything bagel + scallion cream cheese + nova salmon'},
+            {ll:[40.7527,-73.9762],e:'🧁',c:'#d97706',t:'Magnolia Bakery — Grand Central',d:'Lower level. Llevar en el tren a Stamford.',tip:'banana pudding para el tren'},
+            {ll:[40.7306,-74.0024],e:'🍕',c:'#d97706',t:"Joe's Pizza — Greenwich Village",d:'7 Carmine St. Desde 1975.',tip:'plain cheese slice · $4'},
+            {ll:[40.7574,-73.9859],e:'🍕',c:'#d97706',t:"Joe's Pizza — Times Square",d:'1435 Broadway.',tip:'cómodo para Día 1'},
+            {ll:[40.7080,-74.0117],e:'🍕',c:'#d97706',t:"Joe's Pizza — Downtown",d:'124 Fulton St.',tip:'cerca del Oculus'},
+            {ll:[40.7279,-73.9868],e:'🍔',c:'#d97706',t:'7th Street Burger — East Village',d:'91 E 7th St. El original.',tip:'doble con jalapeños + ghost pepper'},
+            {ll:[40.7543,-73.9893],e:'🍔',c:'#d97706',t:'7th Street Burger — Times Square',d:'485 7th Ave.',tip:'conveniente para Midtown'},
+            {ll:[40.7614,-73.9797],e:'🫔',c:'#d97706',t:'Halal Guys — Carrito Original',d:'53rd & 6th Ave. Solo de noche.',tip:'chicken over rice · salsa blanca + roja'},
+            {ll:[40.7644,-73.9733],e:'🌭',c:'#d97706',t:'Carritos — Central Park Sur',d:'59th St, entrada al parque.',tip:'mustaza + chucrut, sin ketchup'},
+            {ll:[40.6426,-74.0753],e:'👵',c:'#16a34a',t:'Enoteca Maria (Nonnas) — Staten Island',d:'27 Hyatt St. 5 min del ferry.',tip:'Reserva semanas antes · Cash only · Jue-Dom'},
+            {ll:[40.7868,-73.9755],e:'🌴',c:'#e8312a',t:'Tiki Chick — Upper West Side',d:'517 Amsterdam Ave (85th St). Bar tiki.',tip:'ir de noche · sándwich de $5'},
+            {ll:[40.7420,-74.0079],e:'🌮',c:'#7c3aed',t:'Los Tacos No.1 — Chelsea Market',d:'75 9th Ave.',tip:'birria taco si está disponible'},
+        ];
+        spots.forEach(s=>L.marker(s.ll,{icon:icoFoodLbl(s.e,s.c)}).addTo(map).bindPopup(pop(s.t,s.d+(s.tip?`<br><span style="color:#d97706;font-size:10px;font-style:italic">${s.tip}</span>`:''))));
+        map.fitBounds([[40.635,-74.085],[40.795,-73.955]],{padding:[24,24]});
+    })();
+}
+
+// ── CITY SWITCHER ─────────────────────────────────────────────────────────────
+
+// Registry of all Leaflet map instances so we can call invalidateSize after tab switch
+const mapRegistry = [];
+
+function registerMap(m) { mapRegistry.push(m); return m; }
+
+function showCity(city, btn) {
+    document.querySelectorAll('.city-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(city).classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top:0, behavior:'smooth' });
+    // Init maps first, then invalidate size after browser has rendered the tab
+    loadMaps(city);
+    setTimeout(() => mapRegistry.forEach(m => { try { m.invalidateSize(); } catch(e){} }), 120);
+}
+
+function loadMaps(city) {
+    if (city === 'chicago') {
+        initMap('map-chi-1', chiDay1);
+        initMap('map-chi-2', chiDay2);
+        initMap('map-chi-3', chiDay3);
+    } else if (city === 'seattle') {
+        initMap('map-sea-2', seaDay2);
+    } else if (city === 'losangeles') {
+        initLaMap('la-map-dia0', [34.0083,-118.4940], 15, [
+            {lat:34.0112,lng:-118.4968,name:'🅿️ Parking Lot 1 North',time:'19:30',color:'#5B8FA8'},
+            {lat:34.0083,lng:-118.4988,name:'🎡 Santa Monica Pier',time:'19:45',color:'#C4603A'},
+            {lat:34.0098,lng:-118.4966,name:'🍽 The Albright / Maria Sol',time:'20:15 — Cena',color:'#D4A853'}
+        ]);
+        initLaMap('la-map-dia1', [34.105,-118.360], 12, [
+            {lat:34.1184,lng:-118.3004,name:'🔭 Griffith Observatory',time:'10:00 AM',color:'#C4603A'},
+            {lat:34.1256,lng:-118.3263,name:'📸 Hollywood Sign Lookout',time:'11:30 AM',color:'#C4603A'},
+            {lat:34.1512,lng:-118.3358,name:'🎬 Warner Bros. Studio Tour',time:'12:30—3:00 PM',color:'#C4603A'},
+            {lat:34.1016,lng:-118.3296,name:'⭐ Hollywood Walk of Fame',time:'3:30 PM',color:'#C4603A'},
+            {lat:34.0724,lng:-118.4035,name:'💎 Beverly Hills Sign',time:'5:00 PM',color:'#C4603A'},
+            {lat:34.0630,lng:-118.3592,name:'🌟 Urban Light LACMA',time:'7:00 PM',color:'#7A8C6E'},
+            {lat:34.0788,lng:-118.3619,name:"🥩 Canter's Deli",time:'7:45 PM',color:'#D4A853'}
+        ]);
+        initLaMap('la-map-dia2', [34.045,-118.790], 11, [
+            {lat:34.0380,lng:-118.8747,name:'🏖 El Matador State Beach',time:'9:00 AM',color:'#C4603A'},
+            {lat:34.0338,lng:-118.7351,name:'🦞 Malibu Seafood',time:'12:00 PM',color:'#D4A853'},
+            {lat:34.0008,lng:-118.8068,name:'🦅 Point Dume',time:'1:30 PM',color:'#C4603A'},
+            {lat:34.1016,lng:-118.7320,name:'🎬 Malibu Creek State Park',time:'3:30 PM',color:'#7A8C6E'},
+            {lat:34.0532,lng:-118.9625,name:"🦐 Neptune's Net",time:'6:00 PM',color:'#D4A853'}
+        ]);
+        initLaMap('la-map-dia3', [34.055,-118.420], 12, [
+            {lat:34.1016,lng:-118.3393,name:'🏡 Famous House Tours',time:'10:00 AM',color:'#C4603A'},
+            {lat:34.0724,lng:-118.4035,name:'🏘 Beverly Hills residencial',time:'12:30 PM',color:'#C4603A'},
+            {lat:33.9871,lng:-118.4755,name:'🛹 Venice Skatepark',time:'2:30 PM',color:'#C4603A'},
+            {lat:33.9952,lng:-118.4745,name:'☕ Gjusta',time:'4:00 PM',color:'#7A8C6E'},
+            {lat:34.0103,lng:-118.4962,name:'🌅 Atardecer Santa Monica',time:'5:30 PM',color:'#5B8FA8'},
+            {lat:34.0083,lng:-118.4988,name:'🎡 Santa Monica Pier',time:'6:30 PM',color:'#5B8FA8'},
+            {lat:33.9890,lng:-118.4624,name:'🍷 Cena Abbot Kinney / Albright',time:'7:30 PM',color:'#D4A853'}
+        ]);
+    } else if (city === 'roadtrip') {
+        initRoadtripMap();
+    } else if (city === 'newyork') {
+        initNycMaps();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadMaps('chicago');
+    setTimeout(() => mapRegistry.forEach(m => { try { m.invalidateSize(); } catch(e){} }), 200);
+});
+</script>
+</body>
+</html>
